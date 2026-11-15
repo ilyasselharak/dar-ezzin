@@ -5,14 +5,14 @@ import { PageHeader } from "@/components/admin/page-header";
 import { StoreImage } from "@/components/shared/store-image";
 import { BrandDialog } from "./brand-dialog";
 import { DeleteTaxonomyButton } from "../categories/category-dialog";
-import { db } from "@/lib/db";
+import { listAdminBrands } from "@/server/queries/admin";
 import { requireStaffPage } from "@/lib/session";
 
 export const metadata = { title: "Marques" };
 
 export default async function BrandsPage() {
   await requireStaffPage();
-  const brands = await db.brand.findMany({ orderBy: { name: "asc" }, include: { _count: { select: { products: true } } } });
+  const brands = await listAdminBrands();
   return (
     <>
       <PageHeader title="Marques" actions={<BrandDialog />} />

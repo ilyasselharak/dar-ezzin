@@ -17,7 +17,7 @@ export default async function EditProductPage({ params }: PageProps<"/admin/prod
     <>
       <PageHeader title={product.name} description={`SKU ${product.sku} · ${product.salesCount} vendu(s)`} actions={<ProductRowActions id={product.id} name={product.name} withLabels />} />
       <ProductForm
-        key={product.updatedAt.toISOString()}
+        key={String(product.updatedAt)}
         productId={product.id}
         categories={categories}
         brands={brands}

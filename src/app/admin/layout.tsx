@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { AdminShell } from "@/components/admin/shell";
 import { requireStaffPage } from "@/lib/session";
-import { db } from "@/lib/db";
+import { countPendingOrders } from "@/server/queries/admin";
 
 export const metadata: Metadata = {
   title: { default: "Administration", template: "%s · Admin Dar Ezzin" },
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   const user = await requireStaffPage();
-  const pendingOrders = await db.order.count({ where: { status: "PENDING" } });
+  const pendingOrders = await countPendingOrders();
   return (
     <AdminShell user={{ name: user.name, email: user.email, role: (user.role as string) ?? "STAFF" }} pendingOrders={pendingOrders}>
       {children}

@@ -1,4 +1,4 @@
-import type { OrderStatus } from "@/generated/prisma/enums";
+import type { OrderStatus } from "@/lib/types";
 
 export const SITE_NAME = "Dar Ezzin";
 
@@ -48,3 +48,6 @@ export const STOCK_RELEASED_STATUSES: OrderStatus[] = ["CANCELLED", "RETURNED"];
 export const PRODUCTS_PER_PAGE = 24;
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 export const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"] as const;
+
+/** Cookie letting the confirmation page show full details only to the buyer: "<number>.<token>". */
+export const LAST_ORDER_COOKIE = "dz_last_order";

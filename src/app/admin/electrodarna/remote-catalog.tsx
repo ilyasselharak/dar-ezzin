@@ -15,7 +15,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatPrice, toCentimes } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { importElectroDarnaProducts } from "@/server/actions/electrodarna";
-import type { RemoteProduct } from "@/server/electrodarna";
+import type { RemoteProduct } from "@convex/electrodarna";
+
+export type { RemoteProduct };
 
 type Linked = Record<string, { id: string; stock: number; price: number }>;
 type Filter = "all" | "available" | "new" | "imported";

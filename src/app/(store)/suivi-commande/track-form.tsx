@@ -9,7 +9,7 @@ import { trackOrder } from "@/server/actions/checkout";
 import { ORDER_STATUS_LABELS } from "@/lib/constants";
 import { formatPrice } from "@/lib/money";
 import { cn, formatDate } from "@/lib/utils";
-import type { OrderStatus } from "@/generated/prisma/enums";
+import type { OrderStatus } from "@/lib/types";
 
 const STEPS: OrderStatus[] = ["PENDING", "CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED"];
 type Result = Extract<Awaited<ReturnType<typeof trackOrder>>, { ok: true }>["data"];

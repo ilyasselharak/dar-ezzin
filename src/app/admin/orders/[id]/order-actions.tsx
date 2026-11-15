@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { addOrderNote, updateOrderCustomer, updateOrderStatus } from "@/server/actions/orders";
 import { ORDER_STATUS_LABELS } from "@/lib/constants";
-import type { OrderStatus } from "@/generated/prisma/enums";
+import type { OrderStatus } from "@/lib/types";
 
 const PRIMARY: Partial<Record<OrderStatus, string>> = {
   CONFIRMED: "Confirmer",

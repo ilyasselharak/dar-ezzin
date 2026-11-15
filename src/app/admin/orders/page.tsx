@@ -10,7 +10,7 @@ import { requireStaffPage } from "@/lib/session";
 import { ORDER_STATUS_LABELS } from "@/lib/constants";
 import { formatPrice } from "@/lib/money";
 import { cn, formatDate } from "@/lib/utils";
-import type { OrderStatus } from "@/generated/prisma/enums";
+import type { OrderStatus } from "@/lib/types";
 
 export const metadata = { title: "Commandes" };
 

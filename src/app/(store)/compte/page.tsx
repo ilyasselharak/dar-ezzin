@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Package } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { db } from "@/lib/db";
+import { getMyOrders } from "@/server/queries/admin";
 import { requireUser } from "@/lib/session";
 import { formatPrice } from "@/lib/money";
 import { formatDate } from "@/lib/utils";
@@ -14,12 +14,7 @@ export const metadata = buildMetadata({ title: "Mon compte", path: "/compte", no
 
 export default async function AccountPage() {
   const user = await requireUser("/compte");
-  const orders = await db.order.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-    include: { items: { select: { name: true, quantity: true } } },
-  });
+  const orders = await getMyOrders();
 
   return (
     <div className="container-page max-w-4xl space-y-8 py-8 sm:py-12">

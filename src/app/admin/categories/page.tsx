@@ -4,17 +4,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PageHeader } from "@/components/admin/page-header";
 import { CategoryIcon } from "@/components/shared/category-icon";
 import { CategoryDialog, DeleteTaxonomyButton } from "./category-dialog";
-import { db } from "@/lib/db";
+import { listAdminCategories } from "@/server/queries/admin";
 import { requireStaffPage } from "@/lib/session";
 
 export const metadata = { title: "Catégories" };
 
 export default async function CategoriesPage() {
   await requireStaffPage();
-  const categories = await db.category.findMany({
-    orderBy: [{ position: "asc" }, { name: "asc" }],
-    include: { _count: { select: { products: true } } },
-  });
+  const categories = await listAdminCategories();
   const roots = categories.filter((c) => !c.parentId);
   const ordered = roots.flatMap((r) => [r, ...categories.filter((c) => c.parentId === r.id)]);
   const parents = roots.map((r) => ({ id: r.id, name: r.name }));

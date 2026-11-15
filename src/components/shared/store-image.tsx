@@ -10,8 +10,8 @@ const loader: ImageLoader = ({ src, width, quality }) => imageUrl(src, width, qu
 type Props = Omit<ImageProps, "src" | "loader" | "alt"> & { imageKey?: string | null; alt?: string | null };
 
 /**
- * Product/category/brand image served from R2 through Cloudflare.
- * `imageKey` is the storage key; the loader builds responsive AVIF/WebP URLs.
+ * Product/category/brand image served from Cloudinary.
+ * `imageKey` is the Cloudinary public_id; the loader builds responsive AVIF/WebP URLs.
  */
 export function StoreImage({ imageKey, alt, className, ...props }: Props) {
   if (!imageKey) {

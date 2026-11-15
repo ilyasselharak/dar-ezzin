@@ -7,7 +7,7 @@ import type { ProductCardData } from "@/server/queries/catalog";
 
 const NEW_DAYS = 30;
 
-function isRecent(date: Date | string) {
+function isRecent(date: Date | string | number) {
   return Date.now() - new Date(date).getTime() < NEW_DAYS * 86_400_000;
 }
 

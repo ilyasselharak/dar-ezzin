@@ -1,13 +1,5 @@
 import type { NextConfig } from "next";
 
-const imageHost = (() => {
-  try {
-    return new URL(process.env.NEXT_PUBLIC_IMAGE_BASE_URL ?? "").hostname;
-  } catch {
-    return undefined;
-  }
-})();
-
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
@@ -19,17 +11,16 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
-  serverExternalPackages: ["sharp"],
   turbopack: {
     rules: {
       "*.css": { loaders: ["@tailwindcss/turbopack"], as: "*.css" },
     },
   },
   images: {
-    // Product images use a custom Cloudflare loader (see src/components/shared/store-image.tsx).
+    // Product images use a custom Cloudinary loader (see src/components/shared/store-image.tsx).
     formats: ["image/avif", "image/webp"],
     qualities: [75, 80],
-    remotePatterns: imageHost ? [{ protocol: "https", hostname: imageHost }] : [],
+    remotePatterns: [{ protocol: "https", hostname: "res.cloudinary.com" }],
   },
   experimental: {
     serverActions: { bodySizeLimit: "1mb" },

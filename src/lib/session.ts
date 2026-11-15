@@ -1,21 +1,20 @@
 import "server-only";
 import { cache } from "react";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
+import { api } from "@convex/_generated/api";
+import { fetchAuthQuery } from "@/lib/convex";
 
 export type AppRole = "CUSTOMER" | "STAFF" | "ADMIN";
+export type SessionUser = { id: string; name: string; email: string; role: AppRole; phone: string | null };
 
-/** Memoised per request so layouts and pages share one lookup. */
-export const getSession = cache(async () => {
-  // Cookie cache is bypassed so role changes / revocations apply immediately.
-  return auth.api.getSession({ headers: await headers(), query: { disableCookieCache: true } });
+/** Memoised per request so layouts and pages share one lookup. Reads the role from Convex every time. */
+export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
+  try {
+    return await fetchAuthQuery(api.users.me, {});
+  } catch {
+    return null;
+  }
 });
-
-export async function getCurrentUser() {
-  const session = await getSession();
-  return session?.user ?? null;
-}
 
 function roleOf(user: { role?: string | null } | null | undefined): AppRole {
   return (user?.role as AppRole) ?? "CUSTOMER";
@@ -52,7 +51,7 @@ export class AuthorizationError extends Error {
   }
 }
 
-/** For server actions & route handlers: throws instead of redirecting. */
+/** For server actions & route handlers: throws instead of redirecting. (Convex re-checks the role.) */
 export async function assertStaff() {
   const user = await getCurrentUser();
   if (!user || !isStaff(user)) throw new AuthorizationError();

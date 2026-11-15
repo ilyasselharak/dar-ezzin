@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/admin/page-header";
 import { SettingsForm } from "./settings-form";
-import { db } from "@/lib/db";
+import { getAdminSettings } from "@/server/queries/admin";
 import { isAdmin, requireStaffPage } from "@/lib/session";
 import { toDirhams } from "@/lib/money";
 
@@ -10,7 +10,7 @@ export const metadata = { title: "Paramètres" };
 export default async function SettingsPage() {
   const user = await requireStaffPage();
   if (!isAdmin(user)) redirect("/admin");
-  const s = await db.storeSettings.upsert({ where: { id: "store" }, update: {}, create: { id: "store" } });
+  const s = await getAdminSettings();
   return (
     <>
       <PageHeader title="Paramètres" description="Informations de la boutique, livraison et contact." />

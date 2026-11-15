@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { Prisma } from "@/generated/prisma/client";
+import { ConvexError } from "convex/values";
 import { AuthorizationError } from "@/lib/session";
 import { logger } from "@/lib/logger";
 
@@ -21,10 +21,8 @@ export function toActionError(err: unknown, context: string): ActionResult<never
   }
   if (err instanceof AuthorizationError) return { ok: false, error: err.message };
   if (err instanceof UserFacingError) return { ok: false, error: err.message };
-  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-    const target = (err.meta?.target as string[] | string | undefined)?.toString() ?? "";
-    return { ok: false, error: `Cette valeur existe déjà${target ? ` (${target})` : ""}.` };
-  }
+  // Messages thrown with ConvexError (convex/lib/errors.ts) are meant for the user.
+  if (err instanceof ConvexError) return { ok: false, error: typeof err.data === "string" ? err.data : "Requête refusée." };
   logger.error(`Action failed: ${context}`, { err });
   return { ok: false, error: "Une erreur inattendue est survenue. Réessayez." };
 }

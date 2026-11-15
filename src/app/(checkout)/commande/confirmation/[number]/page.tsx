@@ -4,8 +4,9 @@ import { notFound } from "next/navigation";
 import { CheckCircle2, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StoreImage } from "@/components/shared/store-image";
-import { db } from "@/lib/db";
-import { getCurrentUser } from "@/lib/session";
+import { api } from "@convex/_generated/api";
+import { fetchAuthQuery } from "@/lib/convex";
+import { LAST_ORDER_COOKIE } from "@/lib/constants";
 import { formatPrice } from "@/lib/money";
 import { buildMetadata } from "@/lib/seo";
 import { getSettings } from "@/server/queries/settings";
@@ -15,15 +16,14 @@ export const metadata = buildMetadata({ title: "Commande confirmée", path: "/co
 export default async function ConfirmationPage({ params }: PageProps<"/commande/confirmation/[number]">) {
   const { number } = await params;
   if (!/^DZ\d{6}-[A-Z0-9]{4}$/.test(number)) notFound();
-  const [order, user, jar, settings] = await Promise.all([
-    db.order.findUnique({ where: { number }, include: { items: true } }),
-    getCurrentUser(),
-    cookies(),
+  const jar = await cookies();
+  const [cookieNumber, token] = (jar.get(LAST_ORDER_COOKIE)?.value ?? "").split(".");
+  // Details (PII) are only returned to the buyer's browser (cookie token) or the account owner
+  const [order, settings] = await Promise.all([
+    fetchAuthQuery(api.orders.confirmation, { number, token: cookieNumber === number ? token : undefined }),
     getSettings(),
   ]);
   if (!order) notFound();
-  // Details (PII) are only shown to the buyer's browser or the account owner
-  const canSee = jar.get("dz_last_order")?.value === number || (user && user.id === order.userId);
 
   return (
     <div className="container-page max-w-2xl py-10">
@@ -39,7 +39,7 @@ export default async function ConfirmationPage({ params }: PageProps<"/commande/
           <p className="text-sm text-muted-foreground">Notre équipe vous appellera très prochainement pour confirmer la livraison.</p>
         </div>
 
-        {canSee ? (
+        {order.canSee ? (
           <div className="space-y-4 rounded-2xl bg-muted/50 p-4 text-start sm:p-5">
             <ul className="divide-y">
               {order.items.map((it) => (

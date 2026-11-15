@@ -16,7 +16,7 @@ export function absoluteUrl(path = "/"): string {
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
-export function formatDate(date: Date | string, opts: Intl.DateTimeFormatOptions = { dateStyle: "medium" }) {
+export function formatDate(date: Date | string | number, opts: Intl.DateTimeFormatOptions = { dateStyle: "medium" }) {
   return new Intl.DateTimeFormat("fr-MA", opts).format(new Date(date));
 }
 

@@ -13,7 +13,7 @@ import { listAdminProducts } from "@/server/queries/admin";
 import { requireStaffPage } from "@/lib/session";
 import { formatPrice } from "@/lib/money";
 import { cn } from "@/lib/utils";
-import type { ProductStatus } from "@/generated/prisma/enums";
+import type { ProductStatus } from "@/lib/types";
 
 export const metadata = { title: "Produits" };
 
