@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Link, useI18n } from "@/i18n/client";
-import { fmt } from "@/i18n/fmt";
+import { plural } from "@/i18n/fmt";
 import type { ListingResult } from "@/server/queries/catalog";
 
 const SORTS = ["pertinence", "meilleures-ventes", "nouveautes", "prix-asc", "prix-desc"] as const;
@@ -108,7 +108,7 @@ export function ListingToolbar({ total, facets }: { total: number; facets: Listi
     <div className="flex flex-wrap items-center justify-between gap-3">
       <p className="flex items-center gap-2 text-sm text-muted-foreground" aria-live="polite">
         {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
-        {fmt(t.listing.resultCount, { count: total })}
+        {plural(locale, total, t.listing.resultCount)}
       </p>
       <div className="flex items-center gap-2">
         <Sheet>
@@ -129,7 +129,7 @@ export function ListingToolbar({ total, facets }: { total: number; facets: Listi
                 <Button variant="ghost" className="h-12 rounded-xl" onClick={() => update(Object.fromEntries(FILTER_KEYS.map((k) => [k, null])))}>{t.listing.clearAll}</Button>
               ) : null}
               <SheetClose asChild>
-                <Button className="h-12 flex-1 rounded-xl text-base">{pending ? <Loader2 className="animate-spin" /> : null} {fmt(t.listing.showResults, { count: total })}</Button>
+                <Button className="h-12 flex-1 rounded-xl text-base">{pending ? <Loader2 className="animate-spin" /> : null} {plural(locale, total, t.listing.showResults)}</Button>
               </SheetClose>
             </SheetFooter>
           </SheetContent>

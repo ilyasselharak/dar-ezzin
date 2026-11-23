@@ -116,6 +116,14 @@ export const seoSettingsFields = {
   returnMethod: v.optional(v.string()),
 };
 
+/** A question/answer pair, French with optional Arabic. Shown only when written by the store. */
+export const faqEntry = v.object({
+  question: v.string(),
+  answer: v.string(),
+  questionAr: v.optional(v.string()),
+  answerAr: v.optional(v.string()),
+});
+
 export const orderItem = v.object({
   productId: v.optional(v.id("products")),
   name: v.string(),
@@ -197,6 +205,8 @@ export default defineSchema({
     metaTitle: v.optional(v.string()),
     metaDescription: v.optional(v.string()),
     seo: v.optional(seoMeta),
+    /** Product-specific questions (Admin → product). */
+    faq: v.optional(v.array(faqEntry)),
     salesCount: v.number(),
     /** Electro Darna product id this product was cloned from (stock synced from it). */
     sourceId: v.optional(v.string()),
@@ -237,6 +247,15 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_user", ["userId"])
     .index("by_phone", ["phone"]),
+
+  /** Store-wide (no categoryId) or category-wide FAQ entries, shown on product pages. */
+  faqs: defineTable({
+    ...faqEntry.fields,
+    categoryId: v.optional(v.id("categories")),
+    position: v.number(),
+    isActive: v.boolean(),
+    updatedAt: v.number(),
+  }).index("by_category", ["categoryId"]),
 
   seoSettings: defineTable({ ...seoSettingsFields, updatedAt: v.number() }),
 

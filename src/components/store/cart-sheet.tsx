@@ -9,17 +9,17 @@ import { usePrice } from "@/components/store/price";
 import { cartCount, cartSubtotal, useCart, type CartLine } from "@/hooks/use-cart";
 import { useMounted } from "@/hooks/use-mounted";
 import { Link, useI18n } from "@/i18n/client";
-import { fmt } from "@/i18n/fmt";
+import { fmt, plural } from "@/i18n/fmt";
 import { cn } from "@/lib/utils";
 
 export function CartButton() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const lines = useCart((s) => s.lines);
   const open = useCart((s) => s.open);
   const mounted = useMounted();
   const count = mounted ? cartCount(lines) : 0;
   return (
-    <button type="button" onClick={open} className="relative inline-flex size-11 items-center justify-center rounded-full hover:bg-muted" aria-label={fmt(t.header.cartCount, { count })}>
+    <button type="button" onClick={open} className="relative inline-flex size-11 items-center justify-center rounded-full hover:bg-muted" aria-label={plural(locale, count, t.header.cartCount)}>
       <ShoppingBag className="size-5.5" />
       {count > 0 ? (
         <span className="absolute end-0.5 top-0.5 flex min-w-5 items-center justify-center rounded-full bg-brass px-1 text-[11px] font-bold leading-5 text-brass-foreground">{count}</span>

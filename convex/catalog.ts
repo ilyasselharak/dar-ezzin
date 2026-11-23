@@ -117,9 +117,22 @@ export const productBySlug = query({
     const brand = p.brandId ? await ctx.db.get(p.brandId) : null;
     const category = p.categoryId ? await ctx.db.get(p.categoryId) : null;
     const parent = category?.parentId ? await ctx.db.get(category.parentId) : null;
+    // FAQ: product entries first, then its category (and parent category), then store-wide entries.
+    const scoped = async (categoryId: Doc<"categories">["_id"] | undefined) =>
+      (await ctx.db.query("faqs").withIndex("by_category", (q) => q.eq("categoryId", categoryId)).collect()).filter((f) => f.isActive).sort((a, b) => a.position - b.position);
+    const faq = [
+      ...(p.faq ?? []),
+      ...(category ? await scoped(category._id) : []),
+      ...(parent ? await scoped(parent._id) : []),
+      ...(await scoped(undefined)),
+    ]
+      .slice(0, 10)
+      .map((f) => ({ question: f.question, answer: f.answer, questionAr: f.questionAr ?? null, answerAr: f.answerAr ?? null }));
     return {
       id: p._id as string,
       name: p.name,
+      nameAr: p.nameAr ?? null,
+      faq,
       slug: p.slug,
       sku: p.sku,
       shortDescription: p.shortDescription ?? null,
@@ -141,7 +154,7 @@ export const productBySlug = query({
       images: p.images.map((i, position) => ({ id: i.key, key: i.key, alt: i.alt ?? null, width: i.width ?? null, height: i.height ?? null, position })),
       brand: brand ? { id: brand._id as string, name: brand.name, slug: brand.slug } : null,
       category: category
-        ? { id: category._id as string, name: category.name, slug: category.slug, parent: parent ? { name: parent.name, slug: parent.slug } : null }
+        ? { id: category._id as string, name: category.name, nameAr: category.nameAr ?? null, slug: category.slug, parent: parent ? { name: parent.name, nameAr: parent.nameAr ?? null, slug: parent.slug } : null }
         : null,
     };
   },

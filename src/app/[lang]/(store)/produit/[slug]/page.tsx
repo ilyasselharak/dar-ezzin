@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { Link } from "@/i18n/client";
 import { notFound } from "next/navigation";
-import { CheckCircle2, CircleAlert, ShieldCheck, Truck, Wallet, RotateCcw } from "lucide-react";
+import { CheckCircle2, CircleAlert, RotateCcw, ShieldCheck, Truck, Wallet } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Breadcrumbs } from "@/components/store/breadcrumbs";
 import { ProductGallery } from "@/components/store/product-gallery";
@@ -9,6 +8,10 @@ import { ProductBuyBox } from "@/components/store/product-buy-box";
 import { ProductRail } from "@/components/store/product-card";
 import { Price } from "@/components/store/price";
 import { JsonLd } from "@/components/shared/json-ld";
+import { Link } from "@/i18n/client";
+import { localizePath, localName } from "@/i18n/config";
+import { fmt, plural } from "@/i18n/fmt";
+import { getDictionary, getLocale } from "@/i18n/server";
 import { getProductBySlug, getRelatedProducts } from "@/server/queries/catalog";
 import { getSettings } from "@/server/queries/settings";
 import { getSeoSettings } from "@/server/queries/seo";
@@ -16,7 +19,7 @@ import { keywordList, productJsonLd, urlFor } from "@/lib/seo";
 import { localizedMetadata } from "@/lib/seo-server";
 import { imageUrl } from "@/lib/images";
 import { discountPercent, formatPrice } from "@/lib/money";
-import { truncate } from "@/lib/utils";
+import { cn, truncate } from "@/lib/utils";
 
 type Spec = { label: string; value: string };
 
@@ -28,21 +31,24 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/produit/[slug]">): Promise<Metadata> {
   const { slug } = await params;
-  const [product, seo] = await Promise.all([getProductBySlug(slug), getSeoSettings()]);
+  const [product, seo, locale] = await Promise.all([getProductBySlug(slug), getSeoSettings(), getLocale()]);
   if (!product) return {};
+  const t = await getDictionary(locale);
   const meta = product.seo;
-  const fallbackDesc = `${product.name}${product.brand ? ` ${product.brand.name}` : ""} à ${formatPrice(product.price)} au Maroc. ${product.shortDescription ?? ""} Livraison partout au Maroc, paiement à la livraison.`;
+  const name = localName(locale, product);
   const ogKey = meta.ogImageKey ?? product.images[0]?.key;
+  const fallbackDesc = truncate(fmt(t.product.metaDescription, { name: product.brand && !name.includes(product.brand.name) ? `${name} ${product.brand.name}` : name, price: formatPrice(product.price, locale) }), 160);
+  // Arabic pages use the Arabic SEO fields from Admin → SEO, else Arabic fallbacks.
   return localizedMetadata({
-    title: product.metaTitle ?? `${product.name} — Prix Maroc`,
-    description: product.metaDescription ?? truncate(fallbackDesc.replace(/\s+/g, " "), 160),
+    title: locale === "ar" ? meta.titleAr || fmt(t.product.metaTitle, { name }) : product.metaTitle ?? fmt(t.product.metaTitle, { name }),
+    description: locale === "ar" ? meta.metaDescriptionAr || fallbackDesc : product.metaDescription ?? fallbackDesc,
     path: `/produit/${product.slug}`,
     canonical: meta.canonicalUrl,
     image: ogKey ? imageUrl(ogKey, 1200) : undefined,
-    imageAlt: meta.ogImageKey ? undefined : (product.images[0]?.alt ?? product.name),
-    keywords: keywordList(meta.keywords, meta.keywordsAr),
-    ogTitle: meta.ogTitle,
-    ogDescription: meta.ogDescription,
+    imageAlt: meta.ogImageKey ? undefined : (product.images[0]?.alt ?? name),
+    keywords: keywordList(locale === "ar" ? meta.keywordsAr : meta.keywords),
+    ogTitle: locale === "ar" ? null : meta.ogTitle,
+    ogDescription: locale === "ar" ? null : meta.ogDescription,
     noIndex: meta.noindex,
     noFollow: meta.nofollow,
     seo,
@@ -51,37 +57,56 @@ export async function generateMetadata({ params }: PageProps<"/[lang]/produit/[s
 
 export default async function ProductPage({ params }: PageProps<"/[lang]/produit/[slug]">) {
   const { slug } = await params;
-  const product = await getProductBySlug(slug);
+  const [product, locale] = await Promise.all([getProductBySlug(slug), getLocale()]);
   if (!product) notFound();
 
-  const [related, settings, seo] = await Promise.all([getRelatedProducts(product.id, product.categoryId, product.brandId), getSettings(), getSeoSettings()]);
+  const [related, settings, seo, t] = await Promise.all([getRelatedProducts(product.id, product.categoryId, product.brandId), getSettings(), getSeoSettings(), getDictionary(locale)]);
   const meta = product.seo;
+  const ar = locale === "ar";
+  const name = localName(locale, product);
   const specs = (Array.isArray(product.specs) ? product.specs : []) as Spec[];
   const off = discountPercent(product.price, product.compareAtPrice);
   const lowStock = product.stock > 0 && product.stock <= product.lowStockThreshold;
-  const freeShipping = product.price >= settings.freeShippingThreshold;
+  const freeShipping = settings.freeShippingThreshold > 0 && product.price >= settings.freeShippingThreshold;
+  const publicUrl = urlFor(localizePath(locale, `/produit/${product.slug}`), seo);
+  const price = (c: number) => formatPrice(c, locale);
+  // Arabic description when written; otherwise the French text, marked as such.
+  const description = ar && meta.descriptionAr ? { text: meta.descriptionAr, lang: undefined } : product.description ? { text: product.description, lang: ar ? "fr" : undefined } : null;
+  const faq = (product.faq ?? [])
+    .map((f) => ({ q: ar ? f.questionAr || null : f.question, a: ar ? f.answerAr || null : f.answer }))
+    .filter((f): f is { q: string; a: string } => Boolean(f.q && f.a));
+  const warranty = product.warrantyMonths
+    ? fmt(t.product.warranty, { duration: product.warrantyMonths % 12 === 0 ? plural(locale, product.warrantyMonths / 12, t.product.years) : plural(locale, product.warrantyMonths, t.product.months) })
+    : t.product.warrantyMaker;
 
   const crumbs = [
-    ...(product.category?.parent ? [{ name: product.category.parent.name, path: `/categorie/${product.category.parent.slug}` }] : []),
-    ...(product.category ? [{ name: product.category.name, path: `/categorie/${product.category.slug}` }] : []),
-    { name: product.name, path: `/produit/${product.slug}` },
+    ...(product.category?.parent ? [{ name: localName(locale, product.category.parent), path: `/categorie/${product.category.parent.slug}` }] : []),
+    ...(product.category ? [{ name: localName(locale, product.category), path: `/categorie/${product.category.slug}` }] : []),
+    { name, path: `/produit/${product.slug}` },
+  ];
+
+  const facts = [
+    { icon: Truck, label: freeShipping ? t.product.freeDelivery : t.trust.deliveryTitle, hint: freeShipping ? null : t.product.deliveryByCity },
+    { icon: Wallet, label: t.product.cod, hint: t.trust.codText },
+    { icon: ShieldCheck, label: warranty, hint: t.trust.warrantyTitle },
+    ...(seo.returnDays > 0 ? [{ icon: RotateCcw, label: fmt(t.product.returns, { days: seo.returnDays }), hint: null }] : []),
   ];
 
   return (
-    <div className="has-sticky-cta pb-20 lg:pb-0">
+    <div className="pb-24 lg:pb-0">
       {seo.sdProduct ? (
         <JsonLd
           data={productJsonLd(
             {
-              name: product.name,
-              url: urlFor(meta.canonicalUrl || `/produit/${product.slug}`, seo),
+              name,
+              url: meta.canonicalUrl ? urlFor(meta.canonicalUrl, seo) : publicUrl,
               sku: product.sku,
-              description: product.shortDescription ?? product.description,
+              description: (ar ? meta.descriptionAr : null) ?? product.shortDescription ?? product.description,
               price: product.price,
               stock: product.stock,
               images: product.images.map((i) => imageUrl(i.key, 1200)),
               brand: product.brand?.name,
-              category: product.category?.name,
+              category: product.category ? localName(locale, product.category) : null,
               warrantyMonths: product.warrantyMonths,
               shippingFee: settings.shippingFee,
               freeShippingThreshold: settings.freeShippingThreshold,
@@ -94,80 +119,80 @@ export default async function ProductPage({ params }: PageProps<"/[lang]/produit
         <Breadcrumbs items={crumbs} />
 
         <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-12">
-          <ProductGallery images={product.images.map((i) => ({ key: i.key, alt: i.alt }))} name={product.name} />
+          <div className="lg:sticky lg:top-36 lg:self-start">
+            <ProductGallery images={product.images.map((i) => ({ key: i.key, alt: i.alt }))} name={name} />
+          </div>
 
           <div className="space-y-6">
-            <div className="space-y-3">
+            <div className="space-y-2">
               {product.brand ? (
-                <Link href={`/marque/${product.brand.slug}`} className="text-xs font-bold uppercase tracking-[0.14em] text-primary hover:underline">
+                <Link href={`/marque/${product.brand.slug}`} className="text-sm font-semibold text-primary hover:underline" title={fmt(t.product.viewBrand, { brand: product.brand.name })}>
                   {product.brand.name}
                 </Link>
               ) : null}
-              <h1 className="text-2xl font-bold leading-tight sm:text-3xl">{meta.h1 || product.name}</h1>
-              <p className="text-xs text-muted-foreground">Réf. {product.sku}</p>
+              <h1 className="text-2xl font-bold leading-tight sm:text-[2rem]">{ar ? name : meta.h1 || name}</h1>
+              <p className="text-xs text-muted-foreground">{t.product.ref} <span dir="ltr">{product.sku}</span></p>
             </div>
 
-            <div className="space-y-2 rounded-2xl bg-muted/50 p-4">
-              <div className="flex items-center gap-3">
+            <div className="space-y-1.5 border-y py-5">
+              <div className="flex flex-wrap items-center gap-3">
                 <Price price={product.price} compareAtPrice={product.compareAtPrice} size="lg" />
-                {off ? <span className="rounded-full bg-destructive px-2.5 py-1 text-xs font-bold text-white">-{off}%</span> : null}
+                {off ? <span dir="ltr" className="rounded-md bg-destructive px-2 py-1 text-sm font-bold text-white">-{off}%</span> : null}
               </div>
-              {off && product.compareAtPrice ? (
-                <p className="text-sm font-medium text-success">Vous économisez {formatPrice(product.compareAtPrice - product.price)}</p>
-              ) : null}
-              <p className="text-xs text-muted-foreground">Prix TTC en dirhams</p>
+              {off && product.compareAtPrice ? <p className="text-sm font-medium text-success">{fmt(t.product.youSave, { amount: price(product.compareAtPrice - product.price) })}</p> : null}
+              <p className="text-xs text-muted-foreground">{t.product.priceTtc}</p>
             </div>
 
             <p className="flex items-center gap-2 text-sm font-medium">
               {product.stock <= 0 ? (
-                <><CircleAlert className="size-4 text-destructive" /> <span className="text-destructive">Rupture de stock</span></>
+                <><CircleAlert className="size-4 text-destructive" aria-hidden /> <span className="text-destructive">{t.product.outOfStockLong}</span></>
               ) : lowStock ? (
-                <><CircleAlert className="size-4 text-amber-600" /> <span className="text-amber-700">Plus que {product.stock} en stock — commandez vite</span></>
+                <><CircleAlert className="size-4 text-amber-600" aria-hidden /> <span className="text-amber-800 dark:text-amber-400">{fmt(t.product.lowStock, { count: product.stock })}</span></>
               ) : (
-                <><CheckCircle2 className="size-4 text-success" /> <span className="text-success">En stock, prêt à être livré</span></>
+                <><CheckCircle2 className="size-4 text-success" aria-hidden /> <span className="text-success">{t.product.inStockReady}</span></>
               )}
             </p>
 
-            {product.shortDescription ? <p className="text-[15px] leading-7 text-foreground/80">{product.shortDescription}</p> : null}
+            {product.shortDescription && !ar ? <p className="text-[15px] leading-7 text-foreground/80">{product.shortDescription}</p> : null}
 
             <ProductBuyBox
               whatsapp={settings.whatsapp}
-              product={{
-                productId: product.id,
-                slug: product.slug,
-                name: product.name,
-                price: product.price,
-                imageKey: product.images[0]?.key ?? null,
-                maxQuantity: product.stock,
-              }}
+              url={publicUrl}
+              product={{ productId: product.id, slug: product.slug, name, price: product.price, imageKey: product.images[0]?.key ?? null, maxQuantity: product.stock }}
             />
 
-            <ul className="grid grid-cols-2 gap-2.5 text-sm">
-              <li className="flex items-center gap-2.5 rounded-xl border p-3"><Truck className="size-5 shrink-0 text-primary" /> {freeShipping ? "Livraison gratuite" : `Livraison ${formatPrice(settings.shippingFee)}`}</li>
-              <li className="flex items-center gap-2.5 rounded-xl border p-3"><Wallet className="size-5 shrink-0 text-primary" /> Paiement à la livraison</li>
-              <li className="flex items-center gap-2.5 rounded-xl border p-3"><ShieldCheck className="size-5 shrink-0 text-primary" /> {product.warrantyMonths ? `Garantie ${product.warrantyMonths >= 12 && product.warrantyMonths % 12 === 0 ? `${product.warrantyMonths / 12} an${product.warrantyMonths > 12 ? "s" : ""}` : `${product.warrantyMonths} mois`}` : "Garantie constructeur"}</li>
-              <li className="flex items-center gap-2.5 rounded-xl border p-3"><RotateCcw className="size-5 shrink-0 text-primary" /> Retour sous 7 jours</li>
+            <ul className="divide-y rounded-2xl border bg-card" aria-label={t.product.keyFacts}>
+              {facts.map(({ icon: Icon, label, hint }) => (
+                <li key={label} className="flex items-start gap-3 px-4 py-3.5">
+                  <Icon className="mt-0.5 size-5 shrink-0 text-primary" strokeWidth={1.75} aria-hidden />
+                  <span className="min-w-0 text-sm">
+                    <span className="block font-medium">{label}</span>
+                    {hint ? <span className="block text-xs text-muted-foreground">{hint}</span> : null}
+                  </span>
+                </li>
+              ))}
             </ul>
           </div>
         </div>
 
-        <div className="grid grid-cols-[minmax(0,1fr)] gap-8 pt-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-12">
-          <Accordion type="multiple" defaultValue={["description", "specs", "arabic"]} className="rounded-2xl border bg-card px-5">
-            {product.description ? (
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-8 pt-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-12">
+          <Accordion type="multiple" defaultValue={["description", "specs", "faq"]} className="rounded-2xl border bg-card px-5">
+            {description ? (
               <AccordionItem value="description">
-                <AccordionTrigger className="text-base font-semibold">Description</AccordionTrigger>
+                <AccordionTrigger className="text-base font-semibold">{t.product.description}</AccordionTrigger>
                 <AccordionContent>
-                  <div className="prose-store whitespace-pre-line">{product.description}</div>
+                  {description.lang ? <p className="mb-3 text-xs text-muted-foreground">{t.product.frenchOnly}</p> : null}
+                  <div lang={description.lang} dir={description.lang ? "ltr" : undefined} className={cn("prose-store whitespace-pre-line", description.lang && "text-start")}>{description.text}</div>
                 </AccordionContent>
               </AccordionItem>
             ) : null}
             {specs.length ? (
               <AccordionItem value="specs">
-                <AccordionTrigger className="text-base font-semibold">Caractéristiques techniques</AccordionTrigger>
+                <AccordionTrigger className="text-base font-semibold">{t.product.specs}</AccordionTrigger>
                 <AccordionContent>
-                  <dl className="divide-y overflow-hidden rounded-xl border">
+                  <dl className="divide-y overflow-hidden rounded-xl border" lang={ar ? "fr" : undefined} dir={ar ? "ltr" : undefined}>
                     {specs.map((s, i) => (
-                      <div key={`${s.label}-${i}`} className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4 px-4 py-3 text-sm even:bg-muted/40">
+                      <div key={`${s.label}-${i}`} className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4 px-4 py-3 text-sm even:bg-muted/50">
                         <dt className="text-muted-foreground">{s.label}</dt>
                         <dd className="font-medium">{s.value}</dd>
                       </div>
@@ -176,23 +201,28 @@ export default async function ProductPage({ params }: PageProps<"/[lang]/produit
                 </AccordionContent>
               </AccordionItem>
             ) : null}
-            {meta.descriptionAr ? (
-              <AccordionItem value="arabic">
-                <AccordionTrigger className="text-base font-semibold">
-                  <span lang="ar" dir="rtl">{meta.titleAr || "الوصف بالعربية"}</span>
-                </AccordionTrigger>
+            {faq.length ? (
+              <AccordionItem value="faq">
+                <AccordionTrigger className="text-base font-semibold">{t.product.faq}</AccordionTrigger>
                 <AccordionContent>
-                  <div lang="ar" dir="rtl" className="prose-store whitespace-pre-line">{meta.descriptionAr}</div>
+                  <dl className="space-y-4">
+                    {faq.map((f) => (
+                      <div key={f.q}>
+                        <dt className="font-medium">{f.q}</dt>
+                        <dd className="mt-1 whitespace-pre-line text-muted-foreground">{f.a}</dd>
+                      </div>
+                    ))}
+                  </dl>
                 </AccordionContent>
               </AccordionItem>
             ) : null}
             <AccordionItem value="delivery" className="border-b-0">
-              <AccordionTrigger className="text-base font-semibold">Livraison & paiement</AccordionTrigger>
+              <AccordionTrigger className="text-base font-semibold">{t.product.deliveryPayment}</AccordionTrigger>
               <AccordionContent className="prose-store">
-                <p>
-                  Livraison partout au Maroc en 24 à 72 h selon votre ville. Frais de livraison : {formatPrice(settings.shippingFee)}, offerts dès {formatPrice(settings.freeShippingThreshold)} d&apos;achat.
-                </p>
-                <p>Après votre commande, notre équipe vous appelle pour confirmer. Vous payez en espèces à la réception, après avoir vérifié votre colis.</p>
+                <p>{t.product.deliveryText}</p>
+                {settings.freeShippingThreshold > 0 ? <p>{fmt(t.product.deliveryFreeText, { amount: price(settings.freeShippingThreshold) })}</p> : null}
+                <p>{t.product.codText}</p>
+                <p><Link href="/livraison-retours" className="font-medium text-primary hover:underline">{t.footer.shipping}</Link></p>
               </AccordionContent>
             </AccordionItem>
           </Accordion>
@@ -200,8 +230,8 @@ export default async function ProductPage({ params }: PageProps<"/[lang]/produit
       </div>
 
       {related.length ? (
-        <section className="container-page py-8">
-          <h2 className="mb-5 text-2xl font-bold">Vous aimerez aussi</h2>
+        <section className="container-page py-10">
+          <h2 className="mb-6 text-2xl font-bold">{t.product.related}</h2>
           <ProductRail products={related} />
         </section>
       ) : null}

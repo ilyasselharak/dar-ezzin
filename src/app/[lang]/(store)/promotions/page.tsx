@@ -7,7 +7,6 @@ import { parseListingParams } from "@/lib/listing-params";
 import { pagedPath, pagedTitle } from "@/lib/seo";
 import { localizedMetadata } from "@/lib/seo-server";
 import { getSeoSettings } from "@/server/queries/seo";
-import { fmt } from "@/i18n/fmt";
 import { getDictionary } from "@/i18n/server";
 
 

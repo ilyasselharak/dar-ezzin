@@ -9,7 +9,7 @@ import { Price } from "@/components/store/price";
 import { WhatsAppIcon } from "@/components/store/whatsapp-button";
 import { Link } from "@/i18n/client";
 import { localName } from "@/i18n/config";
-import { fmt } from "@/i18n/fmt";
+import { fmt, plural } from "@/i18n/fmt";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { getActiveBrands, getHomeCollections, getNavCategories, type ProductCardData } from "@/server/queries/catalog";
 import { getSettings } from "@/server/queries/settings";
@@ -131,7 +131,7 @@ export default async function HomePage() {
                   </span>
                   <span className="space-y-0.5">
                     <span className="block text-sm font-semibold leading-tight">{localName(locale, c)}</span>
-                    <span className="block text-xs text-muted-foreground">{fmt(t.home.categoryCount, { count: c._count.products })}</span>
+                    <span className="block text-xs text-muted-foreground">{plural(locale, c._count.products, t.home.categoryCount)}</span>
                   </span>
                 </Link>
               </li>
