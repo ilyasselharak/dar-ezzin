@@ -5,6 +5,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useCart, type CartLine } from "@/hooks/use-cart";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/client";
+import { fmt } from "@/i18n/fmt";
 
 type Props = {
   product: Omit<CartLine, "quantity">;
@@ -14,6 +16,7 @@ type Props = {
 };
 
 export function AddToCartButton({ product, quantity = 1, variant = "full", className }: Props) {
+  const { t } = useI18n();
   const add = useCart((s) => s.add);
   const [added, setAdded] = useState(false);
   const outOfStock = product.maxQuantity <= 0;
@@ -33,8 +36,8 @@ export function AddToCartButton({ product, quantity = 1, variant = "full", class
         size="icon-lg"
         onClick={onClick}
         disabled={outOfStock}
-        aria-label={`Ajouter ${product.name} au panier`}
-        className={cn("rounded-full shadow-sm", className)}
+        aria-label={outOfStock ? t.common.outOfStock : fmt(t.product.addNamed, { name: product.name })}
+        className={cn("size-10 rounded-full", className)}
       >
         {added ? <Check /> : <ShoppingBag />}
       </Button>
@@ -44,7 +47,7 @@ export function AddToCartButton({ product, quantity = 1, variant = "full", class
   return (
     <Button type="button" onClick={onClick} disabled={outOfStock} className={cn("h-12 rounded-xl text-base", className)}>
       {added ? <Check /> : <ShoppingBag />}
-      {outOfStock ? "Rupture de stock" : added ? "Ajouté au panier" : "Ajouter au panier"}
+      {outOfStock ? t.common.outOfStock : added ? t.product.added : t.product.addToCart}
     </Button>
   );
 }

@@ -145,6 +145,8 @@ export default defineSchema({
 
   categories: defineTable({
     name: v.string(),
+    /** Arabic display name (storefront /ar). Empty = French name. */
+    nameAr: v.optional(v.string()),
     slug: v.string(),
     description: v.optional(v.string()),
     imageKey: v.optional(v.string()),
@@ -174,6 +176,8 @@ export default defineSchema({
 
   products: defineTable({
     name: v.string(),
+    /** Arabic display name (storefront /ar). Empty = French name. */
+    nameAr: v.optional(v.string()),
     slug: v.string(),
     sku: v.string(),
     shortDescription: v.optional(v.string()),

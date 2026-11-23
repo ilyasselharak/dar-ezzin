@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocalePath } from "@/i18n/client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Zap } from "lucide-react";
@@ -12,6 +13,7 @@ import { formatPrice } from "@/lib/money";
 export function ProductBuyBox({ product, whatsapp }: { product: Omit<CartLine, "quantity">; whatsapp: string }) {
   const [qty, setQty] = useState(1);
   const router = useRouter();
+  const lp = useLocalePath();
   const add = useCart((s) => s.add);
   const setOpen = useCart((s) => s.setOpen);
   const outOfStock = product.maxQuantity <= 0;
@@ -19,7 +21,7 @@ export function ProductBuyBox({ product, whatsapp }: { product: Omit<CartLine, "
   function buyNow() {
     add(product, qty);
     setOpen(false);
-    router.push("/commande");
+    router.push(lp("/commande"));
   }
 
   const waText = `Bonjour, je souhaite commander : ${product.name} (x${qty}) — ${formatPrice(product.price * qty)}`;

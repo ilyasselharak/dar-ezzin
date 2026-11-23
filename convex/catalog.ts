@@ -17,6 +17,7 @@ function categoryOut(c: Doc<"categories">) {
   return {
     id: c._id as string,
     name: c.name,
+    nameAr: c.nameAr ?? null,
     slug: c.slug,
     description: c.description ?? null,
     imageKey: c.imageKey ?? null,
@@ -58,6 +59,7 @@ export const navCategories = query({
     return roots.map((c) => ({
       id: c._id as string,
       name: c.name,
+      nameAr: c.nameAr ?? null,
       slug: c.slug,
       icon: c.icon ?? null,
       imageKey: c.imageKey ?? null,
@@ -65,7 +67,7 @@ export const navCategories = query({
       children: all
         .filter((ch) => ch.parentId === c._id)
         .sort(byPositionThenName)
-        .map((ch) => ({ id: ch._id as string, name: ch.name, slug: ch.slug })),
+        .map((ch) => ({ id: ch._id as string, name: ch.name, nameAr: ch.nameAr ?? null, slug: ch.slug })),
       _count: { products: products.filter((p) => p.categoryId === c._id).length },
     }));
   },
@@ -257,7 +259,7 @@ export const searchSuggestions = query({
     return Promise.all(
       list.map(async (p) => {
         const brand = p.brandId ? await ctx.db.get(p.brandId) : null;
-        return { id: p._id as string, name: p.name, slug: p.slug, price: p.price, images: p.images.slice(0, 1).map((i) => ({ key: i.key })), brand: brand ? { name: brand.name } : null };
+        return { id: p._id as string, name: p.name, nameAr: p.nameAr ?? null, slug: p.slug, price: p.price, images: p.images.slice(0, 1).map((i) => ({ key: i.key })), brand: brand ? { name: brand.name } : null };
       }),
     );
   },

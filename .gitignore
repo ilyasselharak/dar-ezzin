@@ -47,3 +47,7 @@ next-env.d.ts
 
 # Convex data exports
 /backups
+
+# Playwright
+/test-results
+/playwright-report
