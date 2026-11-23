@@ -95,8 +95,8 @@ export function pagedPath(path: string, page: number | undefined) {
   return page && page > 1 ? `${path}?page=${page}` : path;
 }
 
-export function pagedTitle(title: string, page: number | undefined) {
-  return page && page > 1 ? `${title} – Page ${page}` : title;
+export function pagedTitle(title: string, page: number | undefined, label = "Page {n}") {
+  return page && page > 1 ? `${title} – ${label.replace("{n}", String(page))}` : title;
 }
 
 // ── JSON-LD ──────────────────────────────────────────────────────────────────
@@ -227,10 +227,11 @@ export function productJsonLd(
   };
 }
 
-export function itemListJsonLd(items: { slug: string; name: string }[], seo?: SeoSettings | null): JsonLd {
+/** Items carry their public path (already localized), e.g. "/ar/produit/x". */
+export function itemListJsonLd(items: { path: string; name: string }[], seo?: SeoSettings | null): JsonLd {
   return {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    itemListElement: items.map((p, i) => ({ "@type": "ListItem", position: i + 1, url: urlFor(`/produit/${p.slug}`, seo), name: p.name })),
+    itemListElement: items.map((p, i) => ({ "@type": "ListItem", position: i + 1, url: urlFor(p.path, seo), name: p.name })),
   };
 }

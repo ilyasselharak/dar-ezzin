@@ -284,8 +284,8 @@ export const categoryBySlug = query({
     const children = (await ctx.db.query("categories").withIndex("by_parent", (q) => q.eq("parentId", c._id)).collect())
       .filter((ch) => ch.isActive)
       .sort(byPositionThenName)
-      .map((ch) => ({ id: ch._id as string, name: ch.name, slug: ch.slug }));
-    return { ...categoryOut(c), parent: parent ? { id: parent._id as string, name: parent.name, slug: parent.slug } : null, children };
+      .map((ch) => ({ id: ch._id as string, name: ch.name, nameAr: ch.nameAr ?? null, slug: ch.slug }));
+    return { ...categoryOut(c), parent: parent ? { id: parent._id as string, name: parent.name, nameAr: parent.nameAr ?? null, slug: parent.slug } : null, children };
   },
 });
 

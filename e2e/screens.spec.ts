@@ -19,7 +19,7 @@ for (const lang of LANGS) {
         await page.getByRole("button", { name: /ajouter au panier|أضف إلى السلة/i }).first().click();
       }
       await page.goto((lang === "ar" ? `/ar${path === "/" ? "" : path}` : path), { waitUntil: "networkidle" });
-      await page.screenshot({ path: `test-results/screens/${STAGE}/${lang}-${name}-${info.project.name}.png`, fullPage: true });
+      await page.screenshot({ path: `screenshots/${STAGE}/${lang}-${name}-${info.project.name}.png`, fullPage: true });
     });
   }
 }
