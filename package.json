@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:convex": "convex dev",
+    "deploy:convex": "convex deploy",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
