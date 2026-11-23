@@ -1,157 +1,226 @@
 import type { Metadata } from "next";
-import { absoluteUrl } from "@/lib/utils";
-import { SITE_NAME } from "@/lib/constants";
+import { imageUrl } from "@/lib/images";
+import { DEFAULT_SEO, type SeoMetaValues, type SeoSettingsValues } from "@convex/lib/seoRules";
 
-export const DEFAULT_DESCRIPTION =
-  "Dar Ezzin, votre boutique d'électroménager au Maroc : réfrigérateurs, machines à laver, cuisinières, climatiseurs et petit électroménager des meilleures marques. Livraison partout au Maroc et paiement à la livraison.";
+export type SeoSettings = SeoSettingsValues;
+export type SeoMeta = SeoMetaValues;
 
-/** Consistent metadata with canonical URL & Open Graph for every indexable page. */
-export function buildMetadata({
-  title,
-  description = DEFAULT_DESCRIPTION,
-  path,
-  image,
-  noIndex,
-  type = "website",
-}: {
+export const DEFAULT_DESCRIPTION = DEFAULT_SEO.defaultDescription;
+export const FALLBACK_OG_PATH = "/og";
+
+/** Public origin used in canonicals, sitemaps and JSON-LD (Admin → SEO override, else NEXT_PUBLIC_SITE_URL). */
+export function siteBase(seo?: Pick<SeoSettings, "canonicalBaseUrl"> | null) {
+  const raw = seo?.canonicalBaseUrl?.trim() || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  return raw.replace(/\/+$/, "");
+}
+
+/** Absolute URL for a site path (absolute URLs are returned unchanged). */
+export function urlFor(path: string, seo?: Pick<SeoSettings, "canonicalBaseUrl"> | null) {
+  if (/^https?:\/\//i.test(path)) return path;
+  return `${siteBase(seo)}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+export function keywordList(...sources: (string | null | undefined)[]) {
+  const out: string[] = [];
+  for (const src of sources) for (const k of (src ?? "").split(/[,،\n]/)) if (k.trim() && !out.includes(k.trim())) out.push(k.trim());
+  return out;
+}
+
+type BuildArgs = {
   title: string;
-  description?: string;
+  description?: string | null;
   path: string;
+  /** Absolute image URL. */
   image?: string;
+  imageAlt?: string;
   noIndex?: boolean;
+  noFollow?: boolean;
   type?: "website" | "article";
-}): Metadata {
-  const url = absoluteUrl(path);
+  keywords?: string[];
+  /** Canonical override: site path or absolute URL. */
+  canonical?: string | null;
+  ogTitle?: string | null;
+  ogDescription?: string | null;
+  /** Title rendered as-is, without the " | Site" template. */
+  absoluteTitle?: boolean;
+  seo?: SeoSettings | null;
+};
+
+/** Consistent metadata with canonical URL, robots and Open Graph for every page. */
+export function buildMetadata({ title, description, path, image, imageAlt, noIndex, noFollow, type = "website", keywords, canonical, ogTitle, ogDescription, absoluteTitle, seo }: BuildArgs): Metadata {
+  const s = seo ?? DEFAULT_SEO;
+  const desc = description?.trim() || s.defaultDescription || DEFAULT_DESCRIPTION;
+  const url = urlFor(canonical?.trim() || path, seo);
+  const ogImage = image ?? (s.ogImageKey ? imageUrl(s.ogImageKey, 1200) : urlFor(FALLBACK_OG_PATH, seo));
+  const socialImage = image ?? (s.socialImageKey ? imageUrl(s.socialImageKey, 1200) : ogImage);
+  const index = !noIndex && s.robotsIndex;
+  const follow = !noFollow && s.robotsFollow;
+  const shareTitle = ogTitle?.trim() || title;
+  const shareDesc = ogDescription?.trim() || desc;
   return {
-    title,
-    description,
+    title: absoluteTitle ? { absolute: title } : title,
+    description: desc,
+    ...(keywords?.length ? { keywords } : {}),
     alternates: { canonical: url },
     openGraph: {
-      title,
-      description,
+      title: shareTitle,
+      description: shareDesc,
       url,
-      siteName: SITE_NAME,
+      siteName: s.siteName,
       locale: "fr_MA",
       type,
-      ...(image ? { images: [{ url: image, width: 1200, height: 1200, alt: title }] } : {}),
+      images: [{ url: ogImage, alt: imageAlt || shareTitle }],
     },
-    twitter: { card: image ? "summary_large_image" : "summary", title, description, ...(image ? { images: [image] } : {}) },
-    robots: noIndex ? { index: false, follow: true } : undefined,
+    twitter: { card: "summary_large_image", title: shareTitle, description: shareDesc, images: [socialImage] },
+    robots: {
+      index,
+      follow,
+      googleBot: { index, follow, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 },
+    },
   };
 }
+
+/** "?page=N" suffix for paginated listings (each page is self-canonical and indexable). */
+export function pagedPath(path: string, page: number | undefined) {
+  return page && page > 1 ? `${path}?page=${page}` : path;
+}
+
+export function pagedTitle(title: string, page: number | undefined) {
+  return page && page > 1 ? `${title} – Page ${page}` : title;
+}
+
+// ── JSON-LD ──────────────────────────────────────────────────────────────────
 
 type JsonLd = Record<string, unknown>;
 
-export function organizationJsonLd(s: { storeName: string; phone: string; email: string; address: string; facebookUrl?: string | null; instagramUrl?: string | null; tiktokUrl?: string | null }): JsonLd {
+export function organizationJsonLd(
+  st: { storeName: string; phone: string; email: string; address: string; facebookUrl?: string | null; instagramUrl?: string | null; tiktokUrl?: string | null },
+  seo: SeoSettings,
+): JsonLd {
+  const sameAs = [st.facebookUrl, st.instagramUrl, st.tiktokUrl, ...seo.orgSameAs.split(/\s+/)].filter((u): u is string => Boolean(u && /^https?:\/\//.test(u)));
+  const isStore = seo.orgType !== "Organization";
   return {
     "@context": "https://schema.org",
-    "@type": "Store",
-    "@id": absoluteUrl("/#store"),
-    name: s.storeName,
-    url: absoluteUrl("/"),
-    logo: absoluteUrl("/icon.svg"),
-    image: absoluteUrl("/opengraph-image"),
-    telephone: s.phone,
-    email: s.email,
-    priceRange: "$$",
-    currenciesAccepted: "MAD",
-    paymentAccepted: "Cash",
-    address: { "@type": "PostalAddress", streetAddress: s.address, addressCountry: "MA" },
-    areaServed: { "@type": "Country", name: "Morocco" },
-    sameAs: [s.facebookUrl, s.instagramUrl, s.tiktokUrl].filter(Boolean),
+    "@type": seo.orgType || "Store",
+    "@id": urlFor("/#organization", seo),
+    name: seo.siteName || st.storeName,
+    ...(seo.orgLegalName ? { legalName: seo.orgLegalName } : {}),
+    ...(seo.orgDescription ? { description: seo.orgDescription } : {}),
+    url: urlFor("/", seo),
+    logo: seo.orgLogoKey ? imageUrl(seo.orgLogoKey, 512) : urlFor("/icon.svg", seo),
+    image: seo.ogImageKey ? imageUrl(seo.ogImageKey, 1200) : urlFor(FALLBACK_OG_PATH, seo),
+    telephone: st.phone,
+    email: st.email,
+    address: { "@type": "PostalAddress", streetAddress: st.address, addressCountry: "MA" },
+    ...(isStore
+      ? { priceRange: seo.priceRange || undefined, currenciesAccepted: "MAD", paymentAccepted: "Cash", areaServed: { "@type": "Country", name: "Morocco" } }
+      : {}),
+    ...(sameAs.length ? { sameAs } : {}),
   };
 }
 
-export function websiteJsonLd(): JsonLd {
+export function websiteJsonLd(seo: SeoSettings): JsonLd {
   return {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: SITE_NAME,
-    url: absoluteUrl("/"),
+    "@id": urlFor("/#website", seo),
+    name: seo.siteName,
+    url: urlFor("/", seo),
     inLanguage: "fr-MA",
+    publisher: { "@id": urlFor("/#organization", seo) },
     potentialAction: {
       "@type": "SearchAction",
-      target: { "@type": "EntryPoint", urlTemplate: `${absoluteUrl("/recherche")}?q={search_term_string}` },
+      target: { "@type": "EntryPoint", urlTemplate: `${urlFor("/recherche", seo)}?q={search_term_string}` },
       "query-input": "required name=search_term_string",
     },
   };
 }
 
-export function breadcrumbJsonLd(items: { name: string; path: string }[]): JsonLd {
+export function breadcrumbJsonLd(items: { name: string; path: string }[], seo?: SeoSettings | null): JsonLd {
   return {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
-    itemListElement: items.map((it, i) => ({ "@type": "ListItem", position: i + 1, name: it.name, item: absoluteUrl(it.path) })),
+    itemListElement: items.map((it, i) => ({ "@type": "ListItem", position: i + 1, name: it.name, item: urlFor(it.path, seo) })),
   };
 }
 
-export function productJsonLd(p: {
-  name: string;
-  slug: string;
-  sku: string;
-  description?: string | null;
-  price: number;
-  stock: number;
-  images: string[];
-  brand?: string | null;
-  category?: string | null;
-  warrantyMonths?: number | null;
-  shippingFee: number;
-  freeShippingThreshold: number;
-}): JsonLd {
-  const priceValidUntil = new Date(Date.now() + 1000 * 60 * 60 * 24 * 90).toISOString().slice(0, 10);
-  return {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    name: p.name,
-    sku: p.sku,
-    mpn: p.sku,
-    description: p.description ?? undefined,
-    image: p.images,
-    category: p.category ?? undefined,
-    brand: p.brand ? { "@type": "Brand", name: p.brand } : undefined,
-    offers: {
-      "@type": "Offer",
-      url: absoluteUrl(`/produit/${p.slug}`),
-      priceCurrency: "MAD",
-      price: (p.price / 100).toFixed(2),
-      priceValidUntil,
-      itemCondition: "https://schema.org/NewCondition",
-      availability: p.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-      seller: { "@id": absoluteUrl("/#store") },
-      shippingDetails: {
+/**
+ * Product + Offer. Only real data: shipping cost comes from the store settings, delivery/return
+ * terms from Admin → SEO → Données structurées (each block can be turned off). No ratings/reviews
+ * are emitted because the store has no review system.
+ */
+export function productJsonLd(
+  p: {
+    name: string;
+    url: string;
+    sku: string;
+    description?: string | null;
+    price: number;
+    stock: number;
+    images: string[];
+    brand?: string | null;
+    category?: string | null;
+    warrantyMonths?: number | null;
+    shippingFee: number;
+    freeShippingThreshold: number;
+  },
+  seo: SeoSettings,
+): JsonLd {
+  const shippingDetails = seo.sdShipping
+    ? {
         "@type": "OfferShippingDetails",
-        shippingRate: {
-          "@type": "MonetaryAmount",
-          value: (p.price >= p.freeShippingThreshold ? 0 : p.shippingFee / 100).toFixed(2),
-          currency: "MAD",
-        },
+        shippingRate: { "@type": "MonetaryAmount", value: (p.price >= p.freeShippingThreshold ? 0 : p.shippingFee / 100).toFixed(2), currency: "MAD" },
         shippingDestination: { "@type": "DefinedRegion", addressCountry: "MA" },
         deliveryTime: {
           "@type": "ShippingDeliveryTime",
-          handlingTime: { "@type": "QuantitativeValue", minValue: 0, maxValue: 1, unitCode: "DAY" },
-          transitTime: { "@type": "QuantitativeValue", minValue: 1, maxValue: 5, unitCode: "DAY" },
+          handlingTime: { "@type": "QuantitativeValue", minValue: seo.shippingHandlingMin, maxValue: seo.shippingHandlingMax, unitCode: "DAY" },
+          transitTime: { "@type": "QuantitativeValue", minValue: seo.shippingTransitMin, maxValue: seo.shippingTransitMax, unitCode: "DAY" },
         },
-      },
-      hasMerchantReturnPolicy: {
-        "@type": "MerchantReturnPolicy",
-        applicableCountry: "MA",
-        returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
-        merchantReturnDays: 7,
-        returnMethod: "https://schema.org/ReturnByMail",
-        returnFees: "https://schema.org/FreeReturn",
-      },
+      }
+    : undefined;
+  const returnPolicy =
+    seo.sdReturnPolicy && seo.returnDays > 0
+      ? {
+          "@type": "MerchantReturnPolicy",
+          applicableCountry: "MA",
+          returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+          merchantReturnDays: seo.returnDays,
+          ...(seo.returnMethod ? { returnMethod: `https://schema.org/${seo.returnMethod}` } : {}),
+          ...(seo.returnFees ? { returnFees: `https://schema.org/${seo.returnFees}` } : {}),
+        }
+      : undefined;
+  return {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "@id": `${p.url}#product`,
+    name: p.name,
+    url: p.url,
+    sku: p.sku,
+    ...(p.description ? { description: p.description } : {}),
+    ...(p.images.length ? { image: p.images } : {}),
+    ...(p.category ? { category: p.category } : {}),
+    ...(p.brand ? { brand: { "@type": "Brand", name: p.brand } } : {}),
+    offers: {
+      "@type": "Offer",
+      url: p.url,
+      priceCurrency: "MAD",
+      price: (p.price / 100).toFixed(2),
+      itemCondition: "https://schema.org/NewCondition",
+      availability: p.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      seller: { "@id": urlFor("/#organization", seo) },
+      ...(shippingDetails ? { shippingDetails } : {}),
+      ...(returnPolicy ? { hasMerchantReturnPolicy: returnPolicy } : {}),
+      ...(p.warrantyMonths
+        ? { warranty: { "@type": "WarrantyPromise", durationOfWarranty: { "@type": "QuantitativeValue", value: p.warrantyMonths, unitCode: "MON" } } }
+        : {}),
     },
-    ...(p.warrantyMonths
-      ? { warranty: { "@type": "WarrantyPromise", durationOfWarranty: { "@type": "QuantitativeValue", value: p.warrantyMonths, unitCode: "MON" } } }
-      : {}),
   };
 }
 
-export function itemListJsonLd(items: { slug: string; name: string }[]): JsonLd {
+export function itemListJsonLd(items: { slug: string; name: string }[], seo?: SeoSettings | null): JsonLd {
   return {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    itemListElement: items.map((p, i) => ({ "@type": "ListItem", position: i + 1, url: absoluteUrl(`/produit/${p.slug}`), name: p.name })),
+    itemListElement: items.map((p, i) => ({ "@type": "ListItem", position: i + 1, url: urlFor(`/produit/${p.slug}`, seo), name: p.name })),
   };
 }

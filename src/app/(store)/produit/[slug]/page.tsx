@@ -11,7 +11,8 @@ import { Price } from "@/components/store/price";
 import { JsonLd } from "@/components/shared/json-ld";
 import { getProductBySlug, getRelatedProducts } from "@/server/queries/catalog";
 import { getSettings } from "@/server/queries/settings";
-import { buildMetadata, productJsonLd } from "@/lib/seo";
+import { getSeoSettings } from "@/server/queries/seo";
+import { buildMetadata, keywordList, productJsonLd, urlFor } from "@/lib/seo";
 import { imageUrl } from "@/lib/images";
 import { discountPercent, formatPrice } from "@/lib/money";
 import { truncate } from "@/lib/utils";
@@ -26,14 +27,24 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps<"/produit/[slug]">): Promise<Metadata> {
   const { slug } = await params;
-  const product = await getProductBySlug(slug);
+  const [product, seo] = await Promise.all([getProductBySlug(slug), getSeoSettings()]);
   if (!product) return {};
+  const meta = product.seo;
   const fallbackDesc = `${product.name}${product.brand ? ` ${product.brand.name}` : ""} à ${formatPrice(product.price)} au Maroc. ${product.shortDescription ?? ""} Livraison partout au Maroc, paiement à la livraison.`;
+  const ogKey = meta.ogImageKey ?? product.images[0]?.key;
   return buildMetadata({
     title: product.metaTitle ?? `${product.name} — Prix Maroc`,
     description: product.metaDescription ?? truncate(fallbackDesc.replace(/\s+/g, " "), 160),
     path: `/produit/${product.slug}`,
-    image: product.images[0] ? imageUrl(product.images[0].key, 1200) : undefined,
+    canonical: meta.canonicalUrl,
+    image: ogKey ? imageUrl(ogKey, 1200) : undefined,
+    imageAlt: meta.ogImageKey ? undefined : (product.images[0]?.alt ?? product.name),
+    keywords: keywordList(meta.keywords, meta.keywordsAr),
+    ogTitle: meta.ogTitle,
+    ogDescription: meta.ogDescription,
+    noIndex: meta.noindex,
+    noFollow: meta.nofollow,
+    seo,
   });
 }
 
@@ -42,7 +53,8 @@ export default async function ProductPage({ params }: PageProps<"/produit/[slug]
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const [related, settings] = await Promise.all([getRelatedProducts(product.id, product.categoryId, product.brandId), getSettings()]);
+  const [related, settings, seo] = await Promise.all([getRelatedProducts(product.id, product.categoryId, product.brandId), getSettings(), getSeoSettings()]);
+  const meta = product.seo;
   const specs = (Array.isArray(product.specs) ? product.specs : []) as Spec[];
   const off = discountPercent(product.price, product.compareAtPrice);
   const lowStock = product.stock > 0 && product.stock <= product.lowStockThreshold;
@@ -56,22 +68,27 @@ export default async function ProductPage({ params }: PageProps<"/produit/[slug]
 
   return (
     <div className="has-sticky-cta pb-20 lg:pb-0">
-      <JsonLd
-        data={productJsonLd({
-          name: product.name,
-          slug: product.slug,
-          sku: product.sku,
-          description: product.shortDescription ?? product.description,
-          price: product.price,
-          stock: product.stock,
-          images: product.images.map((i) => imageUrl(i.key, 1200)),
-          brand: product.brand?.name,
-          category: product.category?.name,
-          warrantyMonths: product.warrantyMonths,
-          shippingFee: settings.shippingFee,
-          freeShippingThreshold: settings.freeShippingThreshold,
-        })}
-      />
+      {seo.sdProduct ? (
+        <JsonLd
+          data={productJsonLd(
+            {
+              name: product.name,
+              url: urlFor(meta.canonicalUrl || `/produit/${product.slug}`, seo),
+              sku: product.sku,
+              description: product.shortDescription ?? product.description,
+              price: product.price,
+              stock: product.stock,
+              images: product.images.map((i) => imageUrl(i.key, 1200)),
+              brand: product.brand?.name,
+              category: product.category?.name,
+              warrantyMonths: product.warrantyMonths,
+              shippingFee: settings.shippingFee,
+              freeShippingThreshold: settings.freeShippingThreshold,
+            },
+            seo,
+          )}
+        />
+      ) : null}
       <div className="container-page space-y-6 py-5 sm:py-8">
         <Breadcrumbs items={crumbs} />
 
@@ -85,7 +102,7 @@ export default async function ProductPage({ params }: PageProps<"/produit/[slug]
                   {product.brand.name}
                 </Link>
               ) : null}
-              <h1 className="text-2xl font-bold leading-tight sm:text-3xl">{product.name}</h1>
+              <h1 className="text-2xl font-bold leading-tight sm:text-3xl">{meta.h1 || product.name}</h1>
               <p className="text-xs text-muted-foreground">Réf. {product.sku}</p>
             </div>
 
@@ -134,7 +151,7 @@ export default async function ProductPage({ params }: PageProps<"/produit/[slug]
         </div>
 
         <div className="grid grid-cols-[minmax(0,1fr)] gap-8 pt-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-12">
-          <Accordion type="multiple" defaultValue={["description", "specs"]} className="rounded-2xl border bg-card px-5">
+          <Accordion type="multiple" defaultValue={["description", "specs", "arabic"]} className="rounded-2xl border bg-card px-5">
             {product.description ? (
               <AccordionItem value="description">
                 <AccordionTrigger className="text-base font-semibold">Description</AccordionTrigger>
@@ -155,6 +172,16 @@ export default async function ProductPage({ params }: PageProps<"/produit/[slug]
                       </div>
                     ))}
                   </dl>
+                </AccordionContent>
+              </AccordionItem>
+            ) : null}
+            {meta.descriptionAr ? (
+              <AccordionItem value="arabic">
+                <AccordionTrigger className="text-base font-semibold">
+                  <span lang="ar" dir="rtl">{meta.titleAr || "الوصف بالعربية"}</span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div lang="ar" dir="rtl" className="prose-store whitespace-pre-line">{meta.descriptionAr}</div>
                 </AccordionContent>
               </AccordionItem>
             ) : null}

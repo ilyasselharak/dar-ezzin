@@ -5,8 +5,10 @@ import { PaginationNav } from "@/components/store/pagination-nav";
 import { JsonLd } from "@/components/shared/json-ld";
 import { itemListJsonLd } from "@/lib/seo";
 import type { ListingResult } from "@/server/queries/catalog";
+import { getSeoSettings } from "@/server/queries/seo";
 
-export function ProductListing({ result, basePath, searchParams }: { result: ListingResult; basePath: string; searchParams: Record<string, string | string[] | undefined> }) {
+export async function ProductListing({ result, basePath, searchParams }: { result: ListingResult; basePath: string; searchParams: Record<string, string | string[] | undefined> }) {
+  const seo = await getSeoSettings();
   return (
     <div className="grid gap-6 lg:grid-cols-[260px_1fr] lg:gap-8">
       <ListingSidebar facets={result.facets} />
@@ -15,7 +17,7 @@ export function ProductListing({ result, basePath, searchParams }: { result: Lis
         <ActiveFilters brands={result.facets.brands} />
         {result.items.length ? (
           <>
-            <JsonLd data={itemListJsonLd(result.items)} />
+            {seo.sdItemList ? <JsonLd data={itemListJsonLd(result.items, seo)} /> : null}
             <ProductGrid products={result.items} priorityCount={4} />
             <PaginationNav page={result.page} pageCount={result.pageCount} basePath={basePath} searchParams={searchParams} />
           </>

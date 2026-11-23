@@ -4,17 +4,20 @@ import { Breadcrumbs } from "@/components/store/breadcrumbs";
 import { ProductListing } from "@/components/store/product-listing";
 import { getBrandBySlug, listProducts } from "@/server/queries/catalog";
 import { parseListingParams } from "@/lib/listing-params";
-import { buildMetadata } from "@/lib/seo";
+import { buildMetadata, pagedPath, pagedTitle } from "@/lib/seo";
+import { getSeoSettings } from "@/server/queries/seo";
 
 export async function generateMetadata({ params, searchParams }: PageProps<"/marque/[slug]">): Promise<Metadata> {
   const { slug } = await params;
-  const brand = await getBrandBySlug(slug);
+  const [brand, seo] = await Promise.all([getBrandBySlug(slug), getSeoSettings()]);
   if (!brand) return {};
+  const { hasFilters, page } = parseListingParams(await searchParams);
   return buildMetadata({
-    title: brand.metaTitle ?? `${brand.name} Maroc — prix et produits`,
-    description: brand.metaDescription ?? `Tous les produits ${brand.name} au meilleur prix au Maroc chez Dar Ezzin. Garantie officielle, livraison partout au Maroc.`,
-    path: `/marque/${brand.slug}`,
-    noIndex: parseListingParams(await searchParams).hasFilters,
+    title: pagedTitle(brand.metaTitle ?? `${brand.name} Maroc — prix et produits`, page),
+    description: brand.metaDescription ?? `Tous les produits ${brand.name} au meilleur prix au Maroc chez ${seo.siteName}. Garantie officielle, livraison partout au Maroc.`,
+    path: pagedPath(`/marque/${brand.slug}`, page),
+    noIndex: hasFilters,
+    seo,
   });
 }
 
@@ -25,6 +28,8 @@ export default async function BrandPage({ params, searchParams }: PageProps<"/ma
   if (!brand) notFound();
   const { hasFilters: _h, brandSlugs: _b, ...listing } = parseListingParams(sp);
   const result = await listProducts({ ...listing, brandId: brand.id });
+  // Out-of-range pagination is a real 404, not an empty 200 page.
+  if ((listing.page ?? 1) > result.pageCount) notFound();
   return (
     <div className="container-page space-y-6 py-6 sm:py-8">
       <Breadcrumbs items={[{ name: brand.name, path: `/marque/${brand.slug}` }]} />

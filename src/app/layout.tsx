@@ -1,21 +1,32 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Manrope } from "next/font/google";
 import { Providers } from "@/components/providers";
-import { DEFAULT_DESCRIPTION } from "@/lib/seo";
-import { SITE_NAME } from "@/lib/constants";
+import { keywordList, siteBase } from "@/lib/seo";
+import { getSeoSettings } from "@/server/queries/seo";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
 const manrope = Manrope({ variable: "--font-manrope", subsets: ["latin"], display: "swap", weight: ["500", "600", "700", "800"] });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
-  title: { default: `${SITE_NAME} — Électroménager au Maroc, livraison partout`, template: `%s | ${SITE_NAME}` },
-  description: DEFAULT_DESCRIPTION,
-  applicationName: SITE_NAME,
-  formatDetection: { telephone: false },
-  openGraph: { siteName: SITE_NAME, locale: "fr_MA", type: "website" },
-};
+// Site-wide defaults, editable in Admin → SEO → Paramètres globaux. Pages override them.
+export async function generateMetadata(): Promise<Metadata> {
+  const seo = await getSeoSettings();
+  const keywords = keywordList(seo.defaultKeywords);
+  return {
+    metadataBase: new URL(siteBase(seo)),
+    title: { default: seo.defaultTitle, template: `%s | ${seo.siteName}` },
+    description: seo.defaultDescription,
+    ...(keywords.length ? { keywords } : {}),
+    applicationName: seo.siteName,
+    formatDetection: { telephone: false },
+    openGraph: { siteName: seo.siteName, locale: "fr_MA", type: "website" },
+    robots: { index: seo.robotsIndex, follow: seo.robotsFollow },
+    verification: {
+      ...(seo.googleVerification ? { google: seo.googleVerification } : {}),
+      ...(seo.bingVerification ? { other: { "msvalidate.01": seo.bingVerification } } : {}),
+    },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: "#1f4a5c",

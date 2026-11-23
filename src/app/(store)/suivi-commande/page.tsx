@@ -1,12 +1,16 @@
 import { TrackOrderForm } from "./track-form";
 import { Breadcrumbs } from "@/components/store/breadcrumbs";
 import { buildMetadata } from "@/lib/seo";
+import { getSeoSettings } from "@/server/queries/seo";
 
-export const metadata = buildMetadata({
-  title: "Suivre ma commande",
-  description: "Suivez l'état de votre commande Dar Ezzin avec votre numéro de commande et votre téléphone.",
-  path: "/suivi-commande",
-});
+export async function generateMetadata() {
+  return buildMetadata({
+    title: "Suivre ma commande",
+    description: "Suivez l'état de votre commande Dar Ezzin avec votre numéro de commande et votre téléphone.",
+    path: "/suivi-commande",
+    seo: await getSeoSettings(),
+  });
+}
 
 export default function TrackOrderPage() {
   return (

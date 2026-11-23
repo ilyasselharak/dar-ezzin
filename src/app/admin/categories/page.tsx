@@ -1,4 +1,7 @@
+import Link from "next/link";
+import { SearchCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/admin/page-header";
@@ -21,7 +24,7 @@ export default async function CategoriesPage() {
       <PageHeader title="Catégories" description="Organisez la navigation de la boutique." actions={<CategoryDialog parents={parents} />} />
       <Card className="py-0">
         <Table>
-          <TableHeader><TableRow><TableHead className="ps-5">Nom</TableHead><TableHead className="hidden sm:table-cell">URL</TableHead><TableHead>Produits</TableHead><TableHead>Statut</TableHead><TableHead className="w-24 pe-5" /></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead className="ps-5">Nom</TableHead><TableHead className="hidden sm:table-cell">URL</TableHead><TableHead>Produits</TableHead><TableHead>Statut</TableHead><TableHead className="w-32 pe-5" /></TableRow></TableHeader>
           <TableBody>
             {ordered.map((c) => (
               <TableRow key={c.id}>
@@ -36,6 +39,7 @@ export default async function CategoriesPage() {
                 <TableCell className="pe-5">
                   <div className="flex justify-end">
                     <CategoryDialog id={c.id} parents={parents} initial={{ name: c.name, slug: c.slug, description: c.description ?? "", parentId: c.parentId, icon: c.icon ?? "", position: c.position, isActive: c.isActive, imageKey: c.imageKey, metaTitle: c.metaTitle ?? "", metaDescription: c.metaDescription ?? "" }} />
+                    <Button asChild variant="ghost" size="icon-sm" aria-label="SEO avancé"><Link href={`/admin/seo/edit/category/${c.id}`}><SearchCheck /></Link></Button>
                     <DeleteTaxonomyButton id={c.id} kind="category" />
                   </div>
                 </TableCell>

@@ -4,6 +4,7 @@ import { mutation, type MutationCtx } from "./_generated/server";
 import { requireStaff, type AppUser } from "./lib/auth";
 import { fail } from "./lib/errors";
 import { buildSearchText, opt } from "./lib/products";
+import { recordSlugRedirect } from "./lib/seo";
 import { movementReason, productImage, productStatus } from "./schema";
 
 const productInput = v.object({
@@ -89,6 +90,7 @@ export const save = mutation({
     const keep = new Set(fields.images.map((i) => i.key));
     const removedKeys = existing.images.map((i) => i.key).filter((k) => !keep.has(k));
     await ctx.db.patch(pid, { ...fields, searchText });
+    await recordSlugRedirect(ctx, "/produit", existing.slug, fields.slug);
     const delta = data.stock - existing.stock;
     if (delta !== 0) await logMovement(ctx, { productId: pid, delta, stockAfter: data.stock, reason: "ADJUSTMENT", note: "Modification depuis la fiche produit", user });
     return { id: pid as string, slug: fields.slug, removedKeys };
@@ -146,6 +148,10 @@ export const duplicate = mutation({
       isFeatured: false,
       salesCount: 0,
       images: [],
+      // SEO metadata must stay unique per page: the copy starts with automatic fallbacks.
+      metaTitle: undefined,
+      metaDescription: undefined,
+      seo: undefined,
       updatedAt: Date.now(),
     };
     return (await ctx.db.insert("products", { ...copy, searchText: await buildSearchText(ctx, copy) })) as string;

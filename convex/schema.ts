@@ -33,6 +33,89 @@ export const productImage = v.object({
   mimeType: v.optional(v.string()),
 });
 
+/** Advanced SEO fields shared by categories and products. Everything is optional: empty = automatic fallback. */
+export const seoMeta = v.object({
+  /** Visible <h1>; falls back to the name. */
+  h1: v.optional(v.string()),
+  /** Absolute URL or site path. Empty = self-referencing canonical. */
+  canonicalUrl: v.optional(v.string()),
+  /** Comma-separated French keywords (targeting notes + <meta name="keywords">). */
+  keywords: v.optional(v.string()),
+  /** Categories only: long SEO text shown under the product grid (page 1). */
+  longDescription: v.optional(v.string()),
+  titleAr: v.optional(v.string()),
+  metaDescriptionAr: v.optional(v.string()),
+  descriptionAr: v.optional(v.string()),
+  keywordsAr: v.optional(v.string()),
+  ogTitle: v.optional(v.string()),
+  ogDescription: v.optional(v.string()),
+  /** Cloudinary public_id of a dedicated social image. */
+  ogImageKey: v.optional(v.string()),
+  /** Categories only: ALT text of the category image. */
+  imageAlt: v.optional(v.string()),
+  noindex: v.optional(v.boolean()),
+  nofollow: v.optional(v.boolean()),
+});
+
+/** Site-wide SEO settings (single document). Missing values fall back to DEFAULT_SEO (convex/lib/seo.ts). */
+export const seoSettingsFields = {
+  // Global
+  siteName: v.optional(v.string()),
+  defaultTitle: v.optional(v.string()),
+  defaultDescription: v.optional(v.string()),
+  defaultKeywords: v.optional(v.string()),
+  canonicalBaseUrl: v.optional(v.string()),
+  robotsIndex: v.optional(v.boolean()),
+  robotsFollow: v.optional(v.boolean()),
+  // Open Graph / social
+  ogTitle: v.optional(v.string()),
+  ogDescription: v.optional(v.string()),
+  ogImageKey: v.optional(v.string()),
+  socialImageKey: v.optional(v.string()),
+  // Organization
+  orgType: v.optional(v.string()),
+  orgLegalName: v.optional(v.string()),
+  orgDescription: v.optional(v.string()),
+  orgLogoKey: v.optional(v.string()),
+  orgSameAs: v.optional(v.string()),
+  priceRange: v.optional(v.string()),
+  // Homepage
+  homeTitle: v.optional(v.string()),
+  homeDescription: v.optional(v.string()),
+  homeKeywords: v.optional(v.string()),
+  homeH1: v.optional(v.string()),
+  homeSeoHeading: v.optional(v.string()),
+  homeSeoText: v.optional(v.string()),
+  homeOgTitle: v.optional(v.string()),
+  homeOgDescription: v.optional(v.string()),
+  homeOgImageKey: v.optional(v.string()),
+  // Technical
+  robotsExtraDisallow: v.optional(v.string()),
+  robotsExtraAllow: v.optional(v.string()),
+  sitemapIncludeBrands: v.optional(v.boolean()),
+  sitemapIncludeStaticPages: v.optional(v.boolean()),
+  sitemapIncludeImages: v.optional(v.boolean()),
+  googleVerification: v.optional(v.string()),
+  bingVerification: v.optional(v.string()),
+  // Structured data
+  sdOrganization: v.optional(v.boolean()),
+  sdWebsite: v.optional(v.boolean()),
+  sdBreadcrumbs: v.optional(v.boolean()),
+  sdProduct: v.optional(v.boolean()),
+  sdItemList: v.optional(v.boolean()),
+  sdShipping: v.optional(v.boolean()),
+  shippingHandlingMin: v.optional(v.number()),
+  shippingHandlingMax: v.optional(v.number()),
+  shippingTransitMin: v.optional(v.number()),
+  shippingTransitMax: v.optional(v.number()),
+  sdReturnPolicy: v.optional(v.boolean()),
+  returnDays: v.optional(v.number()),
+  /** "" | FreeReturn | ReturnFeesCustomerResponsibility | ReturnShippingFees */
+  returnFees: v.optional(v.string()),
+  /** "" | ReturnByMail | ReturnInStore | ReturnAtKiosk */
+  returnMethod: v.optional(v.string()),
+};
+
 export const orderItem = v.object({
   productId: v.optional(v.id("products")),
   name: v.string(),
@@ -72,6 +155,7 @@ export default defineSchema({
     parentId: v.optional(v.id("categories")),
     metaTitle: v.optional(v.string()),
     metaDescription: v.optional(v.string()),
+    seo: v.optional(seoMeta),
     updatedAt: v.number(),
   })
     .index("by_slug", ["slug"])
@@ -108,6 +192,7 @@ export default defineSchema({
     images: v.array(productImage),
     metaTitle: v.optional(v.string()),
     metaDescription: v.optional(v.string()),
+    seo: v.optional(seoMeta),
     salesCount: v.number(),
     /** Electro Darna product id this product was cloned from (stock synced from it). */
     sourceId: v.optional(v.string()),
@@ -148,6 +233,19 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_user", ["userId"])
     .index("by_phone", ["phone"]),
+
+  seoSettings: defineTable({ ...seoSettingsFields, updatedAt: v.number() }),
+
+  /** 301/302 redirects applied by src/proxy.ts. `from` is a site path ("/produit/old-slug"). */
+  redirects: defineTable({
+    from: v.string(),
+    to: v.string(),
+    statusCode: v.number(),
+    note: v.optional(v.string()),
+    /** Created automatically after a slug change. */
+    auto: v.optional(v.boolean()),
+    updatedAt: v.number(),
+  }).index("by_from", ["from"]),
 
   orderEvents: defineTable({
     orderId: v.id("orders"),

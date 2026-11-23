@@ -120,7 +120,13 @@ export function ProductForm({ productId, initial, categories, brands }: { produc
           </Card>
 
           <Card>
-            <CardHeader><CardTitle>Référencement (SEO)</CardTitle><CardDescription>Laissez vide pour générer automatiquement.</CardDescription></CardHeader>
+            <CardHeader>
+              <CardTitle>Référencement (SEO)</CardTitle>
+              <CardDescription>
+                Laissez vide pour générer automatiquement.
+                {productId ? <> H1, mots-clés, arabe, Open Graph, ALT, canonique et noindex : <Link href={`/admin/seo/edit/product/${productId}`} className="text-primary hover:underline">SEO avancé</Link>.</> : null}
+              </CardDescription>
+            </CardHeader>
             <CardContent className="space-y-4">
               <Field label="Titre SEO" error={errors.metaTitle?.message} hint={`${(metaTitle ?? "").length}/70`}><Input {...register("metaTitle")} placeholder={`${name || "Nom du produit"} — Prix Maroc`} /></Field>
               <Field label="Méta-description" error={errors.metaDescription?.message} hint={`${(metaDescription ?? "").length}/170`}><Textarea rows={3} {...register("metaDescription")} /></Field>

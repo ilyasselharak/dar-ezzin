@@ -7,15 +7,28 @@ import { ProductRail } from "@/components/store/product-card";
 import { TrustBar } from "@/components/store/footer";
 import { getActiveBrands, getHomeCollections, getNavCategories, type ProductCardData } from "@/server/queries/catalog";
 import { getSettings } from "@/server/queries/settings";
+import { getSeoSettings } from "@/server/queries/seo";
 import { formatPrice } from "@/lib/money";
-import { buildMetadata } from "@/lib/seo";
+import { buildMetadata, keywordList } from "@/lib/seo";
+import { imageUrl } from "@/lib/images";
 
 export const revalidate = 600;
 
-export const metadata = buildMetadata({
-  title: "Dar Ezzin — Électroménager au Maroc, livraison partout",
-  path: "/",
-});
+export async function generateMetadata() {
+  const seo = await getSeoSettings();
+  const ogKey = seo.homeOgImageKey || seo.ogImageKey;
+  return buildMetadata({
+    title: seo.homeTitle || seo.defaultTitle,
+    absoluteTitle: true,
+    description: seo.homeDescription || seo.defaultDescription,
+    path: "/",
+    keywords: keywordList(seo.homeKeywords, seo.defaultKeywords),
+    image: ogKey ? imageUrl(ogKey, 1200) : undefined,
+    ogTitle: seo.homeOgTitle || seo.ogTitle,
+    ogDescription: seo.homeOgDescription || seo.ogDescription,
+    seo,
+  });
+}
 
 function Section({ title, href, children, eyebrow }: { title: string; href?: string; eyebrow?: string; children: React.ReactNode }) {
   return (
@@ -53,7 +66,7 @@ function HeroProduct({ product }: { product?: ProductCardData }) {
 }
 
 export default async function HomePage() {
-  const [collections, categories, brands, settings] = await Promise.all([getHomeCollections(), getNavCategories(), getActiveBrands(), getSettings()]);
+  const [collections, categories, brands, settings, seo] = await Promise.all([getHomeCollections(), getNavCategories(), getActiveBrands(), getSettings(), getSeoSettings()]);
   const heroProduct = collections.featured[0] ?? collections.bestSellers[0];
 
   return (
@@ -67,7 +80,7 @@ export default async function HomePage() {
               <span className="size-1.5 rounded-full bg-brass" /> Livraison partout au Maroc
             </span>
             <h1 className="text-4xl font-extrabold leading-[1.05] sm:text-5xl lg:text-6xl">
-              L&apos;électroménager qui rend <span className="text-brass">la maison plus belle</span>.
+              {seo.homeH1 ? seo.homeH1 : <>L&apos;électroménager qui rend <span className="text-brass">la maison plus belle</span>.</>}
             </h1>
             <p className="max-w-lg text-base opacity-85 sm:text-lg">
               Réfrigérateurs, lave-linge, cuisinières, climatiseurs et petit électroménager des grandes marques — garantis, livrés chez vous et payés à la livraison.
@@ -97,7 +110,7 @@ export default async function HomePage() {
                 <Link href={`/categorie/${c.slug}`} className="group flex h-full flex-col items-center gap-3 rounded-2xl border bg-card p-3 text-center transition hover:border-primary/30 hover:shadow-md sm:p-5">
                   <span className="relative flex aspect-square w-full max-w-24 items-center justify-center overflow-hidden rounded-2xl bg-accent/60 text-primary transition group-hover:bg-accent">
                     {c.imageKey ? (
-                      <StoreImage imageKey={c.imageKey} alt={c.name} fill sizes="120px" className="object-contain p-2" />
+                      <StoreImage imageKey={c.imageKey} alt={c.imageAlt || c.name} fill sizes="120px" className="object-contain p-2" />
                     ) : (
                       <CategoryIcon name={c.icon} className="size-9 sm:size-11" />
                     )}
@@ -159,16 +172,22 @@ export default async function HomePage() {
       {/* SEO copy */}
       <section className="container-page py-8">
         <div className="rounded-3xl border bg-card p-6 sm:p-10">
-          <h2 className="mb-3 text-xl font-bold sm:text-2xl">Dar Ezzin, votre spécialiste de l&apos;électroménager au Maroc</h2>
+          <h2 className="mb-3 text-xl font-bold sm:text-2xl">{seo.homeSeoHeading || <>Dar Ezzin, votre spécialiste de l&apos;électroménager au Maroc</>}</h2>
           <div className="prose-store max-w-3xl">
-            <p>
-              Dar Ezzin sélectionne pour vous le meilleur du gros et du petit électroménager : réfrigérateurs, congélateurs, machines à laver, lave-vaisselle,
-              cuisinières, fours, micro-ondes, climatiseurs, téléviseurs et accessoires pour la maison. Tous nos produits sont neufs, d&apos;origine et couverts par la garantie constructeur.
-            </p>
-            <p>
-              Nous livrons à Casablanca, Rabat, Marrakech, Tanger, Fès, Agadir et dans toutes les villes du Maroc. Commandez en quelques secondes, notre équipe vous appelle pour confirmer,
-              et vous payez en espèces à la livraison.
-            </p>
+            {seo.homeSeoText ? (
+              seo.homeSeoText.split(/\n{2,}/).map((para, i) => <p key={i} className="whitespace-pre-line">{para}</p>)
+            ) : (
+              <>
+                <p>
+                  Dar Ezzin sélectionne pour vous le meilleur du gros et du petit électroménager : réfrigérateurs, congélateurs, machines à laver, lave-vaisselle,
+                  cuisinières, fours, micro-ondes, climatiseurs, téléviseurs et accessoires pour la maison. Tous nos produits sont neufs, d&apos;origine et couverts par la garantie constructeur.
+                </p>
+                <p>
+                  Nous livrons à Casablanca, Rabat, Marrakech, Tanger, Fès, Agadir et dans toutes les villes du Maroc. Commandez en quelques secondes, notre équipe vous appelle pour confirmer,
+                  et vous payez en espèces à la livraison.
+                </p>
+              </>
+            )}
           </div>
         </div>
       </section>

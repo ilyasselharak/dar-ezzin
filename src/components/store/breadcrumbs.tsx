@@ -2,12 +2,14 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { JsonLd } from "@/components/shared/json-ld";
 import { breadcrumbJsonLd } from "@/lib/seo";
+import { getSeoSettings } from "@/server/queries/seo";
 
-export function Breadcrumbs({ items }: { items: { name: string; path: string }[] }) {
+export async function Breadcrumbs({ items }: { items: { name: string; path: string }[] }) {
   const all = [{ name: "Accueil", path: "/" }, ...items];
+  const seo = await getSeoSettings();
   return (
     <>
-      <JsonLd data={breadcrumbJsonLd(all)} />
+      {seo.sdBreadcrumbs ? <JsonLd data={breadcrumbJsonLd(all, seo)} /> : null}
       <nav aria-label="Fil d'Ariane" className="overflow-x-auto scrollbar-none">
         <ol className="flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground sm:text-sm">
           {all.map((it, i) => (

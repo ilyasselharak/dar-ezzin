@@ -5,6 +5,7 @@ import { Breadcrumbs } from "@/components/store/breadcrumbs";
 import { STATIC_PAGES } from "@/lib/content/pages";
 import { buildMetadata } from "@/lib/seo";
 import { getSettings } from "@/server/queries/settings";
+import { getSeoSettings } from "@/server/queries/seo";
 
 export const dynamicParams = false;
 
@@ -16,7 +17,7 @@ export async function generateMetadata({ params }: PageProps<"/[page]">): Promis
   const { page } = await params;
   const content = STATIC_PAGES[page];
   if (!content) return {};
-  return buildMetadata({ title: content.title, description: content.description, path: `/${page}` });
+  return buildMetadata({ title: content.title, description: content.description, path: `/${page}`, seo: await getSeoSettings() });
 }
 
 export default async function StaticPage({ params }: PageProps<"/[page]">) {

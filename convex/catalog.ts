@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { query, type QueryCtx } from "./_generated/server";
 import { makeCardLoader, normalize } from "./lib/products";
+import { seoOut } from "./lib/seo";
 import { readSettings } from "./lib/settings";
 
 // Public storefront reads. Only ACTIVE products and active categories/brands are exposed.
@@ -25,6 +26,7 @@ function categoryOut(c: Doc<"categories">) {
     parentId: (c.parentId as string | undefined) ?? null,
     metaTitle: c.metaTitle ?? null,
     metaDescription: c.metaDescription ?? null,
+    seo: seoOut(c.seo),
     createdAt: c._creationTime,
     updatedAt: c.updatedAt,
   };
@@ -59,6 +61,7 @@ export const navCategories = query({
       slug: c.slug,
       icon: c.icon ?? null,
       imageKey: c.imageKey ?? null,
+      imageAlt: c.seo?.imageAlt ?? null,
       children: all
         .filter((ch) => ch.parentId === c._id)
         .sort(byPositionThenName)
@@ -120,6 +123,7 @@ export const productBySlug = query({
       brandId: (p.brandId as string | undefined) ?? null,
       metaTitle: p.metaTitle ?? null,
       metaDescription: p.metaDescription ?? null,
+      seo: seoOut(p.seo),
       createdAt: p._creationTime,
       updatedAt: p.updatedAt,
       images: p.images.map((i, position) => ({ id: i.key, key: i.key, alt: i.alt ?? null, width: i.width ?? null, height: i.height ?? null, position })),
@@ -298,8 +302,16 @@ export const productsForCart = query({
 export const sitemap = query({
   args: {},
   handler: async (ctx) => ({
-    products: (await activeProducts(ctx)).map((p) => ({ slug: p.slug, updatedAt: p.updatedAt, images: p.images.slice(0, 1).map((i) => ({ key: i.key })) })),
-    categories: (await ctx.db.query("categories").collect()).filter((c) => c.isActive).map((c) => ({ slug: c.slug, updatedAt: c.updatedAt })),
+    products: (await activeProducts(ctx)).map((p) => ({
+      slug: p.slug,
+      updatedAt: p.updatedAt,
+      noindex: p.seo?.noindex ?? false,
+      canonicalUrl: p.seo?.canonicalUrl ?? null,
+      images: p.images.slice(0, 5).map((i) => ({ key: i.key })),
+    })),
+    categories: (await ctx.db.query("categories").collect())
+      .filter((c) => c.isActive)
+      .map((c) => ({ slug: c.slug, updatedAt: c.updatedAt, noindex: c.seo?.noindex ?? false, canonicalUrl: c.seo?.canonicalUrl ?? null, imageKey: c.imageKey ?? null })),
     brands: (await ctx.db.query("brands").collect()).filter((b) => b.isActive).map((b) => ({ slug: b.slug, updatedAt: b.updatedAt })),
   }),
 });
