@@ -4,6 +4,7 @@ import { mutation } from "./_generated/server";
 import { requireStaff } from "./lib/auth";
 import { fail } from "./lib/errors";
 import { opt, refreshSearchText } from "./lib/products";
+import { recordSlugRedirect } from "./lib/seo";
 
 const nullableString = v.optional(v.union(v.string(), v.null()));
 
@@ -14,6 +15,7 @@ export const saveCategory = mutation({
     id: v.union(v.string(), v.null()),
     data: v.object({
       name: v.string(),
+      nameAr: nullableString,
       slug: v.string(),
       description: nullableString,
       parentId: nullableString,
@@ -44,6 +46,7 @@ export const saveCategory = mutation({
 
     const fields = {
       name: data.name,
+      nameAr: opt(data.nameAr),
       slug: data.slug,
       description: opt(data.description),
       parentId,
@@ -59,7 +62,9 @@ export const saveCategory = mutation({
 
     const previous = await ctx.db.get(cid);
     if (!previous) fail("Catégorie introuvable.");
-    await ctx.db.replace(cid, fields);
+    // Keep the advanced SEO fields edited in Admin → SEO.
+    await ctx.db.replace(cid, { ...fields, seo: previous.seo });
+    await recordSlugRedirect(ctx, "/categorie", previous.slug, fields.slug);
     if (previous.name !== fields.name) await refreshSearchText(ctx, await ctx.db.query("products").withIndex("by_category", (q) => q.eq("categoryId", cid)).collect());
     return { id: cid as string, replacedKey: previous.imageKey && previous.imageKey !== fields.imageKey ? previous.imageKey : null };
   },
@@ -114,6 +119,7 @@ export const saveBrand = mutation({
     const previous = await ctx.db.get(bid);
     if (!previous) fail("Marque introuvable.");
     await ctx.db.replace(bid, fields);
+    await recordSlugRedirect(ctx, "/marque", previous.slug, fields.slug);
     if (previous.name !== fields.name) await refreshSearchText(ctx, await ctx.db.query("products").withIndex("by_brand", (q) => q.eq("brandId", bid)).collect());
     return { id: bid as string, replacedKey: previous.logoKey && previous.logoKey !== fields.logoKey ? previous.logoKey : null };
   },

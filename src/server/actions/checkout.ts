@@ -2,6 +2,7 @@
 
 import { cookies, headers } from "next/headers";
 import { api } from "@convex/_generated/api";
+import { deliveryFor } from "@convex/lib/delivery";
 import { fetchAuthMutation, publicQuery } from "@/lib/convex";
 import { checkoutSchema, trackOrderSchema, type CheckoutInput } from "@/lib/validators/orders";
 import { rateLimit } from "@/lib/rate-limit";
@@ -70,15 +71,21 @@ export type CartQuote = {
   lines: { productId: string; name: string; slug: string; price: number; stock: number; imageKey: string | null; quantity: number; lineTotal: number }[];
   removedIds: string[];
   subtotal: number;
-  shippingFee: number;
+  /** null until a city is chosen (or when the city is not delivered). */
+  shippingFee: number | null;
   total: number;
   freeShippingThreshold: number;
+  delivery: { cityChosen: boolean; deliverable: boolean; cod: boolean; eta: { min: number; max: number } | null };
 };
 
-/** Re-prices the client cart from the database (prices/stock may have changed). */
-export async function quoteCart(items: { productId: string; quantity: number }[]): Promise<CartQuote> {
+/**
+ * Re-prices the client cart from the database (prices/stock may have changed) and applies the
+ * same delivery rule as the order transaction (convex/lib/delivery.ts) for the chosen city.
+ */
+export async function quoteCart(items: { productId: string; quantity: number }[], city = ""): Promise<CartQuote> {
   const safe = items.slice(0, 50).filter((i) => typeof i.productId === "string" && Number.isInteger(i.quantity) && i.quantity > 0);
-  const [{ getProductsForCart }, settings] = await Promise.all([import("@/server/queries/catalog"), publicQuery(api.catalog.settings, {})]);
+  const [{ getProductsForCart }, { getDeliveryConfig }] = await Promise.all([import("@/server/queries/catalog"), import("@/server/queries/delivery")]);
+  const cfg = await getDeliveryConfig();
   const products = await getProductsForCart(safe.map((i) => i.productId));
   const lines = safe
     .map((i) => {
@@ -89,13 +96,16 @@ export async function quoteCart(items: { productId: string; quantity: number }[]
     })
     .filter((l): l is NonNullable<typeof l> => l !== null);
   const subtotal = lines.reduce((s, l) => s + l.lineTotal, 0);
-  const shippingFee = subtotal === 0 || subtotal >= settings.freeShippingThreshold ? 0 : settings.shippingFee;
+  const cityChosen = city.trim().length >= 2;
+  const d = deliveryFor(cfg, city.slice(0, 80), subtotal);
+  const shippingFee = cityChosen && d.deliverable ? d.fee : null;
   return {
     lines,
     removedIds: safe.filter((i) => !products.some((p) => p.id === i.productId)).map((i) => i.productId),
     subtotal,
     shippingFee,
-    total: subtotal + shippingFee,
-    freeShippingThreshold: settings.freeShippingThreshold,
+    total: subtotal + (shippingFee ?? 0),
+    freeShippingThreshold: d.zone?.freeThreshold ?? cfg.freeShippingThreshold,
+    delivery: { cityChosen, deliverable: d.deliverable, cod: d.cod, eta: d.eta },
   };
 }

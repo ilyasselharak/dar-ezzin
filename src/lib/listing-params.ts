@@ -28,6 +28,7 @@ export function parseListingParams(sp: SearchParamsRecord): ListingParams & { ha
   };
   return {
     ...params,
-    hasFilters: Boolean(params.brandSlugs || params.minPrice || params.maxPrice || params.inStock || params.onSale || params.sort || (params.page ?? 1) > 1),
+    // Pagination is not a filter: /categorie/x?page=2 is self-canonical and indexable.
+    hasFilters: Boolean(params.brandSlugs || params.minPrice || params.maxPrice || params.inStock || params.onSale || params.sort),
   };
 }

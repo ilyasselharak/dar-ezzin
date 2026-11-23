@@ -7,15 +7,15 @@ import { useCart } from "@/hooks/use-cart";
 import { useMounted } from "@/hooks/use-mounted";
 
 /** Server-validated prices, stock and shipping for the current cart. Keeps the local cart in sync. */
-export function useCartQuote() {
+export function useCartQuote(city = "") {
   const lines = useCart((s) => s.lines);
   const sync = useCart((s) => s.sync);
   const mounted = useMounted();
   const items = lines.map((l) => ({ productId: l.productId, quantity: l.quantity }));
 
   const query = useQuery({
-    queryKey: ["cart-quote", items],
-    queryFn: () => quoteCart(items),
+    queryKey: ["cart-quote", items, city],
+    queryFn: () => quoteCart(items, city),
     enabled: mounted && items.length > 0,
     staleTime: 15_000,
     placeholderData: (prev) => prev,

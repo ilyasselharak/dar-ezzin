@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { query, type QueryCtx } from "./_generated/server";
 import { makeCardLoader, normalize } from "./lib/products";
+import { seoOut } from "./lib/seo";
 import { readSettings } from "./lib/settings";
 
 // Public storefront reads. Only ACTIVE products and active categories/brands are exposed.
@@ -16,6 +17,7 @@ function categoryOut(c: Doc<"categories">) {
   return {
     id: c._id as string,
     name: c.name,
+    nameAr: c.nameAr ?? null,
     slug: c.slug,
     description: c.description ?? null,
     imageKey: c.imageKey ?? null,
@@ -25,6 +27,7 @@ function categoryOut(c: Doc<"categories">) {
     parentId: (c.parentId as string | undefined) ?? null,
     metaTitle: c.metaTitle ?? null,
     metaDescription: c.metaDescription ?? null,
+    seo: seoOut(c.seo),
     createdAt: c._creationTime,
     updatedAt: c.updatedAt,
   };
@@ -56,14 +59,18 @@ export const navCategories = query({
     return roots.map((c) => ({
       id: c._id as string,
       name: c.name,
+      nameAr: c.nameAr ?? null,
       slug: c.slug,
       icon: c.icon ?? null,
       imageKey: c.imageKey ?? null,
+      imageAlt: c.seo?.imageAlt ?? null,
       children: all
         .filter((ch) => ch.parentId === c._id)
         .sort(byPositionThenName)
-        .map((ch) => ({ id: ch._id as string, name: ch.name, slug: ch.slug })),
-      _count: { products: products.filter((p) => p.categoryId === c._id).length },
+        .map((ch) => ({ id: ch._id as string, name: ch.name, nameAr: ch.nameAr ?? null, slug: ch.slug })),
+      _count: {
+        products: products.filter((p) => p.categoryId === c._id || all.some((ch) => ch.parentId === c._id && ch._id === p.categoryId)).length,
+      },
     }));
   },
 });
@@ -84,12 +91,20 @@ export const homeCollections = query({
   handler: async (ctx) => {
     const all = await activeProducts(ctx);
     const card = makeCardLoader(ctx);
-    const pick = (list: Doc<"products">[]) => Promise.all(list.slice(0, 8).map(card));
+    // Each product appears in one section only, in this priority order.
+    const shown = new Set<string>();
+    const pick = (list: Doc<"products">[]) => {
+      const chosen = list.filter((p) => !shown.has(p._id)).slice(0, 8);
+      for (const p of chosen) shown.add(p._id);
+      return Promise.all(chosen.map(card));
+    };
+    const discount = (p: Doc<"products">) => (p.compareAtPrice && p.compareAtPrice > p.price ? (p.compareAtPrice - p.price) / p.compareAtPrice : 0);
     return {
+      deals: await pick(all.filter((p) => discount(p) > 0 && p.stock > 0).sort((a, b) => discount(b) - discount(a))),
       featured: await pick(all.filter((p) => p.isFeatured).sort((a, b) => b.updatedAt - a.updatedAt)),
+      // Only products that really sold: no invented "best sellers".
+      bestSellers: await pick(all.filter((p) => p.salesCount > 0).sort((a, b) => b.salesCount - a.salesCount)),
       newest: await pick([...all].sort((a, b) => b._creationTime - a._creationTime)),
-      bestSellers: await pick([...all].sort((a, b) => b.salesCount - a.salesCount || b._creationTime - a._creationTime)),
-      deals: await pick(all.filter((p) => (p.compareAtPrice ?? 0) > p.price).sort((a, b) => b.updatedAt - a.updatedAt)),
     };
   },
 });
@@ -102,9 +117,22 @@ export const productBySlug = query({
     const brand = p.brandId ? await ctx.db.get(p.brandId) : null;
     const category = p.categoryId ? await ctx.db.get(p.categoryId) : null;
     const parent = category?.parentId ? await ctx.db.get(category.parentId) : null;
+    // FAQ: product entries first, then its category (and parent category), then store-wide entries.
+    const scoped = async (categoryId: Doc<"categories">["_id"] | undefined) =>
+      (await ctx.db.query("faqs").withIndex("by_category", (q) => q.eq("categoryId", categoryId)).collect()).filter((f) => f.isActive).sort((a, b) => a.position - b.position);
+    const faq = [
+      ...(p.faq ?? []),
+      ...(category ? await scoped(category._id) : []),
+      ...(parent ? await scoped(parent._id) : []),
+      ...(await scoped(undefined)),
+    ]
+      .slice(0, 10)
+      .map((f) => ({ question: f.question, answer: f.answer, questionAr: f.questionAr ?? null, answerAr: f.answerAr ?? null }));
     return {
       id: p._id as string,
       name: p.name,
+      nameAr: p.nameAr ?? null,
+      faq,
       slug: p.slug,
       sku: p.sku,
       shortDescription: p.shortDescription ?? null,
@@ -120,12 +148,13 @@ export const productBySlug = query({
       brandId: (p.brandId as string | undefined) ?? null,
       metaTitle: p.metaTitle ?? null,
       metaDescription: p.metaDescription ?? null,
+      seo: seoOut(p.seo),
       createdAt: p._creationTime,
       updatedAt: p.updatedAt,
       images: p.images.map((i, position) => ({ id: i.key, key: i.key, alt: i.alt ?? null, width: i.width ?? null, height: i.height ?? null, position })),
       brand: brand ? { id: brand._id as string, name: brand.name, slug: brand.slug } : null,
       category: category
-        ? { id: category._id as string, name: category.name, slug: category.slug, parent: parent ? { name: parent.name, slug: parent.slug } : null }
+        ? { id: category._id as string, name: category.name, nameAr: category.nameAr ?? null, slug: category.slug, parent: parent ? { name: parent.name, nameAr: parent.nameAr ?? null, slug: parent.slug } : null }
         : null,
     };
   },
@@ -253,7 +282,7 @@ export const searchSuggestions = query({
     return Promise.all(
       list.map(async (p) => {
         const brand = p.brandId ? await ctx.db.get(p.brandId) : null;
-        return { id: p._id as string, name: p.name, slug: p.slug, price: p.price, images: p.images.slice(0, 1).map((i) => ({ key: i.key })), brand: brand ? { name: brand.name } : null };
+        return { id: p._id as string, name: p.name, nameAr: p.nameAr ?? null, slug: p.slug, price: p.price, images: p.images.slice(0, 1).map((i) => ({ key: i.key })), brand: brand ? { name: brand.name } : null };
       }),
     );
   },
@@ -268,8 +297,8 @@ export const categoryBySlug = query({
     const children = (await ctx.db.query("categories").withIndex("by_parent", (q) => q.eq("parentId", c._id)).collect())
       .filter((ch) => ch.isActive)
       .sort(byPositionThenName)
-      .map((ch) => ({ id: ch._id as string, name: ch.name, slug: ch.slug }));
-    return { ...categoryOut(c), parent: parent ? { id: parent._id as string, name: parent.name, slug: parent.slug } : null, children };
+      .map((ch) => ({ id: ch._id as string, name: ch.name, nameAr: ch.nameAr ?? null, slug: ch.slug }));
+    return { ...categoryOut(c), parent: parent ? { id: parent._id as string, name: parent.name, nameAr: parent.nameAr ?? null, slug: parent.slug } : null, children };
   },
 });
 
@@ -298,8 +327,16 @@ export const productsForCart = query({
 export const sitemap = query({
   args: {},
   handler: async (ctx) => ({
-    products: (await activeProducts(ctx)).map((p) => ({ slug: p.slug, updatedAt: p.updatedAt, images: p.images.slice(0, 1).map((i) => ({ key: i.key })) })),
-    categories: (await ctx.db.query("categories").collect()).filter((c) => c.isActive).map((c) => ({ slug: c.slug, updatedAt: c.updatedAt })),
+    products: (await activeProducts(ctx)).map((p) => ({
+      slug: p.slug,
+      updatedAt: p.updatedAt,
+      noindex: p.seo?.noindex ?? false,
+      canonicalUrl: p.seo?.canonicalUrl ?? null,
+      images: p.images.slice(0, 5).map((i) => ({ key: i.key })),
+    })),
+    categories: (await ctx.db.query("categories").collect())
+      .filter((c) => c.isActive)
+      .map((c) => ({ slug: c.slug, updatedAt: c.updatedAt, noindex: c.seo?.noindex ?? false, canonicalUrl: c.seo?.canonicalUrl ?? null, imageKey: c.imageKey ?? null })),
     brands: (await ctx.db.query("brands").collect()).filter((b) => b.isActive).map((b) => ({ slug: b.slug, updatedAt: b.updatedAt })),
   }),
 });

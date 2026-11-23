@@ -39,6 +39,7 @@ export function ProductForm({ productId, initial, categories, brands }: { produc
   const form = useForm<ProductFormInput, unknown, ProductFormValues>({ resolver: zodResolver(productFormSchema), defaultValues: initial });
   const { register, control, watch, setValue, formState: { errors, isDirty } } = form;
   const specs = useFieldArray({ control, name: "specs" });
+  const faq = useFieldArray({ control, name: "faq" });
 
   const [name, price, costPrice, slug, metaTitle, metaDescription, shortDescription] = watch(["name", "price", "costPrice", "slug", "metaTitle", "metaDescription", "shortDescription"]);
   const margin = Number(price) > 0 && Number(costPrice) > 0 ? Math.round(((Number(price) - Number(costPrice)) / Number(price)) * 100) : null;
@@ -74,6 +75,9 @@ export function ProductForm({ productId, initial, categories, brands }: { produc
                   })}
                   placeholder="Ex : Réfrigérateur combiné No Frost 340 L Inox"
                 />
+              </Field>
+              <Field label="Nom en arabe" error={errors.nameAr?.message} hint="Affiché sur le site arabe (/ar). Vide = nom français.">
+                <Input dir="rtl" lang="ar" {...register("nameAr")} placeholder="ثلاجة سامسونغ 340 لتر" />
               </Field>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Slug (URL) *" error={errors.slug?.message} hint={`/produit/${slug || "…"}`}>
@@ -120,7 +124,36 @@ export function ProductForm({ productId, initial, categories, brands }: { produc
           </Card>
 
           <Card>
-            <CardHeader><CardTitle>Référencement (SEO)</CardTitle><CardDescription>Laissez vide pour générer automatiquement.</CardDescription></CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between gap-3">
+              <div><CardTitle>Questions fréquentes</CardTitle><CardDescription>Propres à ce produit (s&apos;ajoutent aux questions de la boutique et de la catégorie). Réponses réelles uniquement.</CardDescription></div>
+              <Button type="button" variant="outline" size="sm" onClick={() => faq.append({ question: "", answer: "", questionAr: "", answerAr: "" })} disabled={faq.fields.length >= 20}><Plus /> Ajouter</Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {faq.fields.length === 0 ? <p className="text-sm text-muted-foreground">Aucune question propre à ce produit.</p> : null}
+              {faq.fields.map((f, i) => (
+                <div key={f.id} className="space-y-2 rounded-xl border p-3">
+                  <div className="flex gap-2">
+                    <Input {...register(`faq.${i}.question`)} placeholder="Question" aria-invalid={!!errors.faq?.[i]?.question} />
+                    <Button type="button" variant="ghost" size="icon" onClick={() => faq.remove(i)} aria-label="Supprimer la question"><Trash2 /></Button>
+                  </div>
+                  <Textarea rows={2} {...register(`faq.${i}.answer`)} placeholder="Réponse" aria-invalid={!!errors.faq?.[i]?.answer} />
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <Input dir="rtl" lang="ar" {...register(`faq.${i}.questionAr`)} placeholder="السؤال (اختياري)" />
+                    <Input dir="rtl" lang="ar" {...register(`faq.${i}.answerAr`)} placeholder="الجواب (اختياري)" />
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Référencement (SEO)</CardTitle>
+              <CardDescription>
+                Laissez vide pour générer automatiquement.
+                {productId ? <> H1, mots-clés, arabe, Open Graph, ALT, canonique et noindex : <Link href={`/admin/seo/edit/product/${productId}`} className="text-primary hover:underline">SEO avancé</Link>.</> : null}
+              </CardDescription>
+            </CardHeader>
             <CardContent className="space-y-4">
               <Field label="Titre SEO" error={errors.metaTitle?.message} hint={`${(metaTitle ?? "").length}/70`}><Input {...register("metaTitle")} placeholder={`${name || "Nom du produit"} — Prix Maroc`} /></Field>
               <Field label="Méta-description" error={errors.metaDescription?.message} hint={`${(metaDescription ?? "").length}/170`}><Textarea rows={3} {...register("metaDescription")} /></Field>

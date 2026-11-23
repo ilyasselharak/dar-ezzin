@@ -17,6 +17,8 @@ export const save = mutation({
     facebookUrl: v.optional(v.union(v.string(), v.null())),
     instagramUrl: v.optional(v.union(v.string(), v.null())),
     tiktokUrl: v.optional(v.union(v.string(), v.null())),
+    codEnabled: v.optional(v.boolean()),
+    acceptUnlistedCities: v.optional(v.boolean()),
   },
   handler: async (ctx, a) => {
     await requireAdmin(ctx);
@@ -29,7 +31,9 @@ export const save = mutation({
       updatedAt: Date.now(),
     };
     const existing = await ctx.db.query("settings").first();
-    if (existing) await ctx.db.replace(existing._id, doc);
-    else await ctx.db.insert("settings", doc);
+    // Switches not sent by a form keep their current value.
+    const full = { ...doc, codEnabled: a.codEnabled ?? existing?.codEnabled, acceptUnlistedCities: a.acceptUnlistedCities ?? existing?.acceptUnlistedCities };
+    if (existing) await ctx.db.replace(existing._id, full);
+    else await ctx.db.insert("settings", full);
   },
 });

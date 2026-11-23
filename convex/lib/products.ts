@@ -33,6 +33,7 @@ export function makeCardLoader(ctx: Ctx) {
     return {
       id: p._id as string,
       name: p.name,
+      nameAr: p.nameAr ?? null,
       slug: p.slug,
       price: p.price,
       compareAtPrice: p.compareAtPrice ?? null,

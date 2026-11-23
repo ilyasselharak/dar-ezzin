@@ -2,10 +2,12 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Link, useI18n } from "@/i18n/client";
+import { localizePath } from "@/i18n/config";
+import { fmt } from "@/i18n/fmt";
 
 type Suggestion = { id: string; name: string; href: string; brand: string | null; price: string; image: string | null };
 
@@ -19,6 +21,7 @@ function useDebounced<T>(value: T, ms: number) {
 }
 
 export function SearchBox({ className, autoFocus, onNavigate }: { className?: string; autoFocus?: boolean; onNavigate?: () => void }) {
+  const { t, locale } = useI18n();
   const router = useRouter();
   const listId = useId();
   const [q, setQ] = useState("");
@@ -28,10 +31,10 @@ export function SearchBox({ className, autoFocus, onNavigate }: { className?: st
   const debounced = useDebounced(q.trim(), 200);
 
   const { data, isFetching } = useQuery({
-    queryKey: ["search", debounced],
+    queryKey: ["search", locale, debounced],
     enabled: debounced.length >= 2,
     queryFn: async ({ signal }) => {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(debounced)}`, { signal });
+      const res = await fetch(`/api/search?q=${encodeURIComponent(debounced)}&lang=${locale}`, { signal });
       return ((await res.json()) as { items: Suggestion[] }).items;
     },
   });
@@ -48,7 +51,7 @@ export function SearchBox({ className, autoFocus, onNavigate }: { className?: st
   function go(href: string) {
     setOpen(false);
     onNavigate?.();
-    router.push(href);
+    router.push(localizePath(locale, href));
   }
 
   function onSubmit(e: React.FormEvent) {
@@ -68,8 +71,8 @@ export function SearchBox({ className, autoFocus, onNavigate }: { className?: st
           autoFocus={autoFocus}
           autoComplete="off"
           enterKeyHint="search"
-          placeholder="Rechercher un réfrigérateur, une marque…"
-          aria-label="Rechercher des produits"
+          placeholder={t.header.searchPlaceholder}
+          aria-label={t.header.searchLabel}
           role="combobox"
           aria-expanded={open && items.length > 0}
           aria-controls={listId}
@@ -89,12 +92,12 @@ export function SearchBox({ className, autoFocus, onNavigate }: { className?: st
               setActive((a) => Math.max(-1, a - 1));
             } else if (e.key === "Escape") setOpen(false);
           }}
-          className="h-11 w-full rounded-full border border-input bg-muted/60 ps-10 pe-10 text-sm outline-none transition placeholder:text-muted-foreground focus:border-ring focus:bg-background focus:ring-3 focus:ring-ring/20 [&::-webkit-search-cancel-button]:hidden"
+          className="h-11 w-full rounded-full border border-input bg-background ps-10 pe-10 text-sm outline-none transition placeholder:text-muted-foreground focus:border-ring focus:bg-background focus:ring-3 focus:ring-ring/20 [&::-webkit-search-cancel-button]:hidden"
         />
         {isFetching ? (
           <Loader2 className="absolute end-3.5 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
         ) : q ? (
-          <button type="button" onClick={() => setQ("")} className="absolute end-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:bg-muted" aria-label="Effacer">
+          <button type="button" onClick={() => setQ("")} className="absolute end-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:bg-muted" aria-label={t.header.clearSearch}>
             <X className="size-4" />
           </button>
         ) : null}
@@ -125,7 +128,7 @@ export function SearchBox({ className, autoFocus, onNavigate }: { className?: st
           ))}
           <li>
             <button type="button" onClick={() => go(`/recherche?q=${encodeURIComponent(q.trim())}`)} className="w-full rounded-xl p-2.5 text-center text-sm font-medium text-primary hover:bg-muted">
-              Voir tous les résultats pour « {q.trim()} »
+              {fmt(t.header.seeAllResults, { q: q.trim() })}
             </button>
           </li>
         </ul>

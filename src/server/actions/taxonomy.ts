@@ -20,6 +20,7 @@ export async function saveCategory(id: string | null, input: CategoryFormInput):
       id,
       data: {
         name: data.name,
+        nameAr: data.nameAr ?? null,
         slug: data.slug,
         description: data.description ?? null,
         parentId: data.parentId || null,

@@ -44,3 +44,11 @@ next-env.d.ts
 
 !.env.example
 /public/uploads
+
+# Convex data exports
+/backups
+
+# Playwright
+/test-results
+/playwright-report
+/screenshots
