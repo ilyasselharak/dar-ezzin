@@ -13,7 +13,9 @@ export const DEFAULT_SETTINGS = {
   announcement: "Livraison gratuite dès 1 000 DH · Paiement à la livraison",
 };
 
-export type StoreSettings = Omit<Doc<"settings">, "_id" | "_creationTime" | "updatedAt" | "announcement" | "facebookUrl" | "instagramUrl" | "tiktokUrl"> & {
+export type StoreSettings = Omit<Doc<"settings">, "_id" | "_creationTime" | "updatedAt" | "announcement" | "facebookUrl" | "instagramUrl" | "tiktokUrl" | "codEnabled" | "acceptUnlistedCities"> & {
+  codEnabled: boolean;
+  acceptUnlistedCities: boolean;
   announcement: string | null;
   facebookUrl: string | null;
   instagramUrl: string | null;
@@ -36,5 +38,7 @@ export async function readSettings(ctx: QueryCtx | MutationCtx): Promise<StoreSe
     facebookUrl: base.facebookUrl ?? null,
     instagramUrl: base.instagramUrl ?? null,
     tiktokUrl: base.tiktokUrl ?? null,
+    codEnabled: s?.codEnabled ?? true,
+    acceptUnlistedCities: s?.acceptUnlistedCities ?? true,
   };
 }

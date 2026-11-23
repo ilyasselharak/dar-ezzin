@@ -148,6 +148,24 @@ export default defineSchema({
     facebookUrl: v.optional(v.string()),
     instagramUrl: v.optional(v.string()),
     tiktokUrl: v.optional(v.string()),
+    /** Cash on delivery offered at all (default true). */
+    codEnabled: v.optional(v.boolean()),
+    /** Accept orders for cities without a delivery zone, at the default fee (default true). */
+    acceptUnlistedCities: v.optional(v.boolean()),
+    updatedAt: v.number(),
+  }),
+
+  /** Delivery fee, delay and cash-on-delivery availability per city (Admin → Livraison). */
+  deliveryZones: defineTable({
+    city: v.string(),
+    cityAr: v.optional(v.string()),
+    fee: v.number(),
+    freeThreshold: v.optional(v.number()),
+    etaMinDays: v.number(),
+    etaMaxDays: v.number(),
+    codAvailable: v.boolean(),
+    isActive: v.boolean(),
+    position: v.number(),
     updatedAt: v.number(),
   }),
 

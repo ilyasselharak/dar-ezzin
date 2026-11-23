@@ -4,7 +4,8 @@ import { mutation, query } from "./_generated/server";
 import { currentUser, requireStaff } from "./lib/auth";
 import { fail } from "./lib/errors";
 import { opt } from "./lib/products";
-import { readSettings } from "./lib/settings";
+import { deliveryFor } from "./lib/delivery";
+import { readDeliveryConfig } from "./delivery";
 import { logMovement } from "./products";
 import { orderStatus } from "./schema";
 
@@ -53,7 +54,6 @@ export const create = mutation({
   handler: async (ctx, a) => {
     if (!a.items.length || a.items.length > 50) fail("Votre panier est vide");
     const user = await currentUser(ctx);
-    const settings = await readSettings(ctx);
 
     // Merge duplicate lines
     const qty = new Map<Id<"products">, number>();
@@ -73,7 +73,11 @@ export const create = mutation({
       lines.push({ productId: p._id, name: p.name, sku: p.sku, imageKey: p.images[0]?.key, unitPrice: p.price, quantity, lineTotal: p.price * quantity });
     }
     const subtotal = lines.reduce((s, l) => s + l.lineTotal, 0);
-    const shippingFee = subtotal >= settings.freeShippingThreshold ? 0 : settings.shippingFee;
+    // Same rule as the checkout preview: fee, delay and cash on delivery come from the city's zone.
+    const delivery = deliveryFor(await readDeliveryConfig(ctx), a.city, subtotal);
+    if (!delivery.deliverable) fail("Nous ne livrons pas encore cette ville. Contactez-nous sur WhatsApp.");
+    if (!delivery.cod) fail("Le paiement à la livraison n'est pas disponible pour cette ville. Contactez-nous sur WhatsApp.");
+    const shippingFee = delivery.fee;
 
     let number = orderNumber();
     for (let i = 0; i < 5 && (await ctx.db.query("orders").withIndex("by_number", (q) => q.eq("number", number)).first()); i++) number = orderNumber();

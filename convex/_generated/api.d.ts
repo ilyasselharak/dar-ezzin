@@ -11,10 +11,12 @@
 import type * as admin from "../admin.js";
 import type * as catalog from "../catalog.js";
 import type * as crons from "../crons.js";
+import type * as delivery from "../delivery.js";
 import type * as electrodarna from "../electrodarna.js";
 import type * as http from "../http.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_cloudinary from "../lib/cloudinary.js";
+import type * as lib_delivery from "../lib/delivery.js";
 import type * as lib_errors from "../lib/errors.js";
 import type * as lib_products from "../lib/products.js";
 import type * as lib_seo from "../lib/seo.js";
@@ -39,10 +41,12 @@ declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   catalog: typeof catalog;
   crons: typeof crons;
+  delivery: typeof delivery;
   electrodarna: typeof electrodarna;
   http: typeof http;
   "lib/auth": typeof lib_auth;
   "lib/cloudinary": typeof lib_cloudinary;
+  "lib/delivery": typeof lib_delivery;
   "lib/errors": typeof lib_errors;
   "lib/products": typeof lib_products;
   "lib/seo": typeof lib_seo;
