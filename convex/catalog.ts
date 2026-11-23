@@ -68,7 +68,9 @@ export const navCategories = query({
         .filter((ch) => ch.parentId === c._id)
         .sort(byPositionThenName)
         .map((ch) => ({ id: ch._id as string, name: ch.name, nameAr: ch.nameAr ?? null, slug: ch.slug })),
-      _count: { products: products.filter((p) => p.categoryId === c._id).length },
+      _count: {
+        products: products.filter((p) => p.categoryId === c._id || all.some((ch) => ch.parentId === c._id && ch._id === p.categoryId)).length,
+      },
     }));
   },
 });
@@ -89,12 +91,20 @@ export const homeCollections = query({
   handler: async (ctx) => {
     const all = await activeProducts(ctx);
     const card = makeCardLoader(ctx);
-    const pick = (list: Doc<"products">[]) => Promise.all(list.slice(0, 8).map(card));
+    // Each product appears in one section only, in this priority order.
+    const shown = new Set<string>();
+    const pick = (list: Doc<"products">[]) => {
+      const chosen = list.filter((p) => !shown.has(p._id)).slice(0, 8);
+      for (const p of chosen) shown.add(p._id);
+      return Promise.all(chosen.map(card));
+    };
+    const discount = (p: Doc<"products">) => (p.compareAtPrice && p.compareAtPrice > p.price ? (p.compareAtPrice - p.price) / p.compareAtPrice : 0);
     return {
+      deals: await pick(all.filter((p) => discount(p) > 0 && p.stock > 0).sort((a, b) => discount(b) - discount(a))),
       featured: await pick(all.filter((p) => p.isFeatured).sort((a, b) => b.updatedAt - a.updatedAt)),
+      // Only products that really sold: no invented "best sellers".
+      bestSellers: await pick(all.filter((p) => p.salesCount > 0).sort((a, b) => b.salesCount - a.salesCount)),
       newest: await pick([...all].sort((a, b) => b._creationTime - a._creationTime)),
-      bestSellers: await pick([...all].sort((a, b) => b.salesCount - a.salesCount || b._creationTime - a._creationTime)),
-      deals: await pick(all.filter((p) => (p.compareAtPrice ?? 0) > p.price).sort((a, b) => b.updatedAt - a.updatedAt)),
     };
   },
 });

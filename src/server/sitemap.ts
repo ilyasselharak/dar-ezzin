@@ -8,7 +8,14 @@ import { urlFor, type SeoSettings } from "@/lib/seo";
 export const SITEMAP_SECTIONS = ["pages", "categories", "products", "brands"] as const;
 export type SitemapSection = (typeof SITEMAP_SECTIONS)[number];
 
+/** `loc` is the French (default) URL; the Arabic twin is emitted alongside with hreflang links. */
 type Entry = { loc: string; lastmod?: number; changefreq?: string; priority?: number; images?: string[] };
+
+const arabicTwin = (loc: string) => {
+  const u = new URL(loc);
+  u.pathname = u.pathname === "/" ? "/ar" : `/ar${u.pathname}`;
+  return u.toString().replace(/\/$/, "");
+};
 
 /** Only self-canonical, indexable pages belong in the sitemap. */
 const selfCanonical = (seo: SeoSettings, path: string, canonical: string | null) => !canonical || urlFor(canonical, seo) === urlFor(path, seo);
@@ -57,10 +64,17 @@ const iso = (t: number) => new Date(t).toISOString();
 
 export function renderUrlset(entries: Entry[]) {
   const body = entries
+    .flatMap((e) => {
+      const fr = e.loc.replace(/\/$/, "") || e.loc;
+      const ar = arabicTwin(e.loc);
+      const alternates = `<xhtml:link rel="alternate" hreflang="fr-MA" href="${esc(fr)}"/><xhtml:link rel="alternate" hreflang="ar-MA" href="${esc(ar)}"/><xhtml:link rel="alternate" hreflang="x-default" href="${esc(fr)}"/>`;
+      return [{ ...e, loc: fr, alternates }, { ...e, loc: ar, alternates }];
+    })
     .map((e) =>
       [
         "<url>",
         `<loc>${esc(e.loc)}</loc>`,
+        e.alternates,
         e.lastmod ? `<lastmod>${iso(e.lastmod)}</lastmod>` : "",
         e.changefreq ? `<changefreq>${e.changefreq}</changefreq>` : "",
         e.priority != null ? `<priority>${e.priority}</priority>` : "",
@@ -69,7 +83,7 @@ export function renderUrlset(entries: Entry[]) {
       ].join(""),
     )
     .join("\n");
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n${body}\n</urlset>\n`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n${body}\n</urlset>\n`;
 }
 
 export async function renderIndex() {

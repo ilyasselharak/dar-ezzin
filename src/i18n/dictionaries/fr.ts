@@ -187,6 +187,8 @@ export const fr = {
     whatsappCta: "Discuter sur WhatsApp",
     whatsappGreeting: "Bonjour Dar Ezzin, j'ai besoin d'un conseil.",
     seoTitle: "Dar Ezzin, votre spécialiste de l'électroménager au Maroc",
+    seoText1: "Dar Ezzin sélectionne pour vous le meilleur du gros et du petit électroménager : réfrigérateurs, congélateurs, machines à laver, lave-vaisselle, cuisinières, fours, micro-ondes, climatiseurs, téléviseurs et accessoires pour la maison. Tous nos produits sont neufs, d'origine et couverts par la garantie constructeur.",
+    seoText2: "Nous livrons à Casablanca, Rabat, Marrakech, Tanger, Fès, Agadir et dans toutes les villes du Maroc. Commandez en quelques secondes, notre équipe vous appelle pour confirmer, et vous payez en espèces à la livraison.",
   },
   cart: {
     title: "Mon panier",

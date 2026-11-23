@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Mail, MapPin, MessageCircle, Phone } from "lucide-react";
 import { Breadcrumbs } from "@/components/store/breadcrumbs";
 import { STATIC_PAGES } from "@/lib/content/pages";
-import { buildMetadata } from "@/lib/seo";
+import { localizedMetadata } from "@/lib/seo-server";
 import { getSettings } from "@/server/queries/settings";
 import { getSeoSettings } from "@/server/queries/seo";
 
@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: PageProps<"/[lang]/[page]">):
   const { page } = await params;
   const content = STATIC_PAGES[page];
   if (!content) return {};
-  return buildMetadata({ title: content.title, description: content.description, path: `/${page}`, seo: await getSeoSettings() });
+  return localizedMetadata({ title: content.title, description: content.description, path: `/${page}`, seo: await getSeoSettings() });
 }
 
 export default async function StaticPage({ params }: PageProps<"/[lang]/[page]">) {

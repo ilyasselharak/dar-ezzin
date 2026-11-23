@@ -8,10 +8,12 @@ import { api } from "@convex/_generated/api";
 import { fetchAuthQuery } from "@/lib/convex";
 import { LAST_ORDER_COOKIE } from "@/lib/constants";
 import { formatPrice } from "@/lib/money";
-import { buildMetadata } from "@/lib/seo";
+import { localizedMetadata } from "@/lib/seo-server";
 import { getSettings } from "@/server/queries/settings";
 
-export const metadata = buildMetadata({ title: "Commande confirmée", path: "/commande/confirmation", noIndex: true });
+export async function generateMetadata() {
+  return localizedMetadata({ title: "Commande confirmée", path: "/commande/confirmation", noIndex: true });
+}
 
 export default async function ConfirmationPage({ params }: PageProps<"/[lang]/commande/confirmation/[number]">) {
   const { number } = await params;

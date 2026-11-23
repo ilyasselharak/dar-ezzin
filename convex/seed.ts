@@ -116,7 +116,7 @@ export const catalog = internalMutation({
         brandId: brandIds.get(p.brand),
         specs: p.specs.map(([label, value]) => ({ label, value })),
         images: (images[slug] ?? []).map((img) => ({ ...img, alt: `${p.brand} ${p.name}` })),
-        salesCount: Math.floor(Math.random() * 40),
+        salesCount: 0, // real sales only (incremented by orders)
         updatedAt: now,
       };
       const productId = await ctx.db.insert("products", { ...fields, searchText: await buildSearchText(ctx, fields) });

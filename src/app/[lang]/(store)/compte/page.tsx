@@ -7,10 +7,12 @@ import { requireUser } from "@/lib/session";
 import { formatPrice } from "@/lib/money";
 import { formatDate } from "@/lib/utils";
 import { ORDER_STATUS_LABELS, ORDER_STATUS_STYLES } from "@/lib/constants";
-import { buildMetadata } from "@/lib/seo";
+import { localizedMetadata } from "@/lib/seo-server";
 import { SignOutButton } from "./sign-out-button";
 
-export const metadata = buildMetadata({ title: "Mon compte", path: "/compte", noIndex: true });
+export async function generateMetadata() {
+  return localizedMetadata({ title: "Mon compte", path: "/compte", noIndex: true });
+}
 
 export default async function AccountPage() {
   const user = await requireUser("/compte");

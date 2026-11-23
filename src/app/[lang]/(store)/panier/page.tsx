@@ -1,7 +1,9 @@
 import { CartPageClient } from "./cart-page-client";
-import { buildMetadata } from "@/lib/seo";
+import { localizedMetadata } from "@/lib/seo-server";
 
-export const metadata = buildMetadata({ title: "Mon panier", path: "/panier", noIndex: true });
+export async function generateMetadata() {
+  return localizedMetadata({ title: "Mon panier", path: "/panier", noIndex: true });
+}
 
 export default function CartPage() {
   return (

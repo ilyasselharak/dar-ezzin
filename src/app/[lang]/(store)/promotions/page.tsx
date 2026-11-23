@@ -4,12 +4,13 @@ import { Breadcrumbs } from "@/components/store/breadcrumbs";
 import { ProductListing } from "@/components/store/product-listing";
 import { listProducts } from "@/server/queries/catalog";
 import { parseListingParams } from "@/lib/listing-params";
-import { buildMetadata, pagedPath, pagedTitle } from "@/lib/seo";
+import { pagedPath, pagedTitle } from "@/lib/seo";
+import { localizedMetadata } from "@/lib/seo-server";
 import { getSeoSettings } from "@/server/queries/seo";
 
 export async function generateMetadata({ searchParams }: PageProps<"/[lang]/promotions">): Promise<Metadata> {
   const [{ hasFilters, page }, seo] = await Promise.all([searchParams.then(parseListingParams), getSeoSettings()]);
-  return buildMetadata({
+  return localizedMetadata({
     title: pagedTitle("Promotions électroménager au Maroc", page),
     description: "Les meilleures promotions sur l'électroménager au Maroc : réfrigérateurs, machines à laver, climatiseurs et plus. Livraison partout au Maroc.",
     path: pagedPath("/promotions", page),

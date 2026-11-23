@@ -1,8 +1,10 @@
 import { Suspense } from "react";
 import { AuthForm } from "../auth-form";
-import { buildMetadata } from "@/lib/seo";
+import { localizedMetadata } from "@/lib/seo-server";
 
-export const metadata = buildMetadata({ title: "Créer un compte", path: "/inscription", noIndex: true });
+export async function generateMetadata() {
+  return localizedMetadata({ title: "Créer un compte", path: "/inscription", noIndex: true });
+}
 
 export default function SignUpPage() {
   return <Suspense><AuthForm mode="sign-up" /></Suspense>;

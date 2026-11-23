@@ -1,8 +1,10 @@
 import { CheckoutForm } from "./checkout-form";
-import { buildMetadata } from "@/lib/seo";
+import { localizedMetadata } from "@/lib/seo-server";
 import { getCurrentUser } from "@/lib/session";
 
-export const metadata = buildMetadata({ title: "Finaliser ma commande", path: "/commande", noIndex: true });
+export async function generateMetadata() {
+  return localizedMetadata({ title: "Finaliser ma commande", path: "/commande", noIndex: true });
+}
 
 export default async function CheckoutPage() {
   const user = await getCurrentUser();

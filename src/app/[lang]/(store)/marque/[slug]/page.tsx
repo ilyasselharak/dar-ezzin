@@ -4,7 +4,8 @@ import { Breadcrumbs } from "@/components/store/breadcrumbs";
 import { ProductListing } from "@/components/store/product-listing";
 import { getBrandBySlug, listProducts } from "@/server/queries/catalog";
 import { parseListingParams } from "@/lib/listing-params";
-import { buildMetadata, pagedPath, pagedTitle } from "@/lib/seo";
+import { pagedPath, pagedTitle } from "@/lib/seo";
+import { localizedMetadata } from "@/lib/seo-server";
 import { getSeoSettings } from "@/server/queries/seo";
 
 export async function generateMetadata({ params, searchParams }: PageProps<"/[lang]/marque/[slug]">): Promise<Metadata> {
@@ -12,7 +13,7 @@ export async function generateMetadata({ params, searchParams }: PageProps<"/[la
   const [brand, seo] = await Promise.all([getBrandBySlug(slug), getSeoSettings()]);
   if (!brand) return {};
   const { hasFilters, page } = parseListingParams(await searchParams);
-  return buildMetadata({
+  return localizedMetadata({
     title: pagedTitle(brand.metaTitle ?? `${brand.name} Maroc — prix et produits`, page),
     description: brand.metaDescription ?? `Tous les produits ${brand.name} au meilleur prix au Maroc chez ${seo.siteName}. Garantie officielle, livraison partout au Maroc.`,
     path: pagedPath(`/marque/${brand.slug}`, page),

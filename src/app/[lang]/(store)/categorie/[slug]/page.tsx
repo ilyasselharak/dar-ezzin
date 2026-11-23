@@ -6,7 +6,8 @@ import { ProductListing } from "@/components/store/product-listing";
 import { getCategoryBySlug, listProducts } from "@/server/queries/catalog";
 import { getSeoSettings } from "@/server/queries/seo";
 import { parseListingParams } from "@/lib/listing-params";
-import { buildMetadata, keywordList, pagedPath, pagedTitle } from "@/lib/seo";
+import { keywordList, pagedPath, pagedTitle } from "@/lib/seo";
+import { localizedMetadata } from "@/lib/seo-server";
 import { imageUrl } from "@/lib/images";
 import { truncate } from "@/lib/utils";
 
@@ -18,7 +19,7 @@ export async function generateMetadata({ params, searchParams }: PageProps<"/[la
   const meta = category.seo;
   const ogKey = meta.ogImageKey ?? category.imageKey;
   const path = `/categorie/${category.slug}`;
-  return buildMetadata({
+  return localizedMetadata({
     title: pagedTitle(category.metaTitle ?? `${category.name} au meilleur prix au Maroc`, page),
     description:
       category.metaDescription ??

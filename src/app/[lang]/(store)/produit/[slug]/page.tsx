@@ -12,7 +12,8 @@ import { JsonLd } from "@/components/shared/json-ld";
 import { getProductBySlug, getRelatedProducts } from "@/server/queries/catalog";
 import { getSettings } from "@/server/queries/settings";
 import { getSeoSettings } from "@/server/queries/seo";
-import { buildMetadata, keywordList, productJsonLd, urlFor } from "@/lib/seo";
+import { keywordList, productJsonLd, urlFor } from "@/lib/seo";
+import { localizedMetadata } from "@/lib/seo-server";
 import { imageUrl } from "@/lib/images";
 import { discountPercent, formatPrice } from "@/lib/money";
 import { truncate } from "@/lib/utils";
@@ -32,7 +33,7 @@ export async function generateMetadata({ params }: PageProps<"/[lang]/produit/[s
   const meta = product.seo;
   const fallbackDesc = `${product.name}${product.brand ? ` ${product.brand.name}` : ""} à ${formatPrice(product.price)} au Maroc. ${product.shortDescription ?? ""} Livraison partout au Maroc, paiement à la livraison.`;
   const ogKey = meta.ogImageKey ?? product.images[0]?.key;
-  return buildMetadata({
+  return localizedMetadata({
     title: product.metaTitle ?? `${product.name} — Prix Maroc`,
     description: product.metaDescription ?? truncate(fallbackDesc.replace(/\s+/g, " "), 160),
     path: `/produit/${product.slug}`,

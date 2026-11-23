@@ -4,12 +4,13 @@ import { Breadcrumbs } from "@/components/store/breadcrumbs";
 import { ProductListing } from "@/components/store/product-listing";
 import { listProducts } from "@/server/queries/catalog";
 import { parseListingParams } from "@/lib/listing-params";
-import { buildMetadata, pagedPath, pagedTitle } from "@/lib/seo";
+import { pagedPath, pagedTitle } from "@/lib/seo";
+import { localizedMetadata } from "@/lib/seo-server";
 import { getSeoSettings } from "@/server/queries/seo";
 
 export async function generateMetadata({ searchParams }: PageProps<"/[lang]/recherche">): Promise<Metadata> {
   const [{ q, hasFilters, page }, seo] = await Promise.all([searchParams.then(parseListingParams), getSeoSettings()]);
-  return buildMetadata({
+  return localizedMetadata({
     title: q ? `Résultats pour « ${q} »` : pagedTitle("Tous nos produits d'électroménager", page),
     path: q ? "/recherche" : pagedPath("/recherche", page),
     // Internal search results are never indexed (Google guidelines); the full catalogue is.

@@ -1,10 +1,10 @@
 import { TrackOrderForm } from "./track-form";
 import { Breadcrumbs } from "@/components/store/breadcrumbs";
-import { buildMetadata } from "@/lib/seo";
+import { localizedMetadata } from "@/lib/seo-server";
 import { getSeoSettings } from "@/server/queries/seo";
 
 export async function generateMetadata() {
-  return buildMetadata({
+  return localizedMetadata({
     title: "Suivre ma commande",
     description: "Suivez l'état de votre commande Dar Ezzin avec votre numéro de commande et votre téléphone.",
     path: "/suivi-commande",

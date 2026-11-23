@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { imageUrl } from "@/lib/images";
 import { DEFAULT_SEO, type SeoMetaValues, type SeoSettingsValues } from "@convex/lib/seoRules";
+import { LANG_TAG, localizePath, OG_LOCALE, type Locale } from "@/i18n/config";
 
 export type SeoSettings = SeoSettingsValues;
 export type SeoMeta = SeoMetaValues;
@@ -44,13 +45,21 @@ type BuildArgs = {
   /** Title rendered as-is, without the " | Site" template. */
   absoluteTitle?: boolean;
   seo?: SeoSettings | null;
+  /** Page language: canonical is the URL in that language, with hreflang alternates for both. */
+  locale?: Locale;
 };
 
 /** Consistent metadata with canonical URL, robots and Open Graph for every page. */
-export function buildMetadata({ title, description, path, image, imageAlt, noIndex, noFollow, type = "website", keywords, canonical, ogTitle, ogDescription, absoluteTitle, seo }: BuildArgs): Metadata {
+export function buildMetadata({ title, description, path, image, imageAlt, noIndex, noFollow, type = "website", keywords, canonical, ogTitle, ogDescription, absoluteTitle, seo, locale = "fr" }: BuildArgs): Metadata {
   const s = seo ?? DEFAULT_SEO;
   const desc = description?.trim() || s.defaultDescription || DEFAULT_DESCRIPTION;
-  const url = urlFor(canonical?.trim() || path, seo);
+  const custom = canonical?.trim();
+  const url = urlFor(custom ? (custom.startsWith("/") ? localizePath(locale, custom) : custom) : localizePath(locale, path), seo);
+  // hreflang pairs only for self-canonical, indexable pages.
+  const languages =
+    !custom && !noIndex
+      ? { [LANG_TAG.fr]: urlFor(path, seo), [LANG_TAG.ar]: urlFor(localizePath("ar", path), seo), "x-default": urlFor(path, seo) }
+      : undefined;
   const ogImage = image ?? (s.ogImageKey ? imageUrl(s.ogImageKey, 1200) : urlFor(FALLBACK_OG_PATH, seo));
   const socialImage = image ?? (s.socialImageKey ? imageUrl(s.socialImageKey, 1200) : ogImage);
   const index = !noIndex && s.robotsIndex;
@@ -61,13 +70,14 @@ export function buildMetadata({ title, description, path, image, imageAlt, noInd
     title: absoluteTitle ? { absolute: title } : title,
     description: desc,
     ...(keywords?.length ? { keywords } : {}),
-    alternates: { canonical: url },
+    alternates: { canonical: url, ...(languages ? { languages } : {}) },
     openGraph: {
       title: shareTitle,
       description: shareDesc,
       url,
       siteName: s.siteName,
-      locale: "fr_MA",
+      locale: OG_LOCALE[locale],
+      alternateLocale: [OG_LOCALE[locale === "fr" ? "ar" : "fr"]],
       type,
       images: [{ url: ogImage, alt: imageAlt || shareTitle }],
     },
