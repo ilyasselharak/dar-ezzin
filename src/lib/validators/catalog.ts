@@ -6,9 +6,18 @@ export const specSchema = z.object({
   value: z.string().trim().min(1, "Valeur requise").max(200),
 });
 
+export const faqEntrySchema = z.object({
+  question: z.string().trim().min(5, "Question requise").max(300),
+  answer: z.string().trim().min(2, "Réponse requise").max(3000),
+  questionAr: optionalText(300),
+  answerAr: optionalText(3000),
+});
+
 export const productFormSchema = z
   .object({
     name: z.string().trim().min(2, "Nom requis").max(160),
+    nameAr: optionalText(160),
+    faq: z.array(faqEntrySchema).max(20).default([]),
     slug: slugSchema,
     sku: z.string().trim().min(2, "SKU requis").max(64),
     shortDescription: optionalText(300),
@@ -37,6 +46,7 @@ export type ProductFormValues = z.output<typeof productFormSchema>;
 
 export const categoryFormSchema = z.object({
   name: z.string().trim().min(2).max(80),
+  nameAr: optionalText(80),
   slug: slugSchema,
   description: optionalText(2000),
   parentId: z.string().optional().nullable(),

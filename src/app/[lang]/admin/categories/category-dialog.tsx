@@ -20,7 +20,7 @@ import { deleteCategory, saveCategory } from "@/server/actions/taxonomy";
 import { slugify } from "@/lib/utils";
 
 const NONE = "__none__";
-const EMPTY: CategoryFormInput = { name: "", slug: "", description: "", parentId: null, icon: "", position: 0, isActive: true, imageKey: null, metaTitle: "", metaDescription: "" };
+const EMPTY: CategoryFormInput = { name: "", nameAr: "", slug: "", description: "", parentId: null, icon: "", position: 0, isActive: true, imageKey: null, metaTitle: "", metaDescription: "" };
 
 export function CategoryDialog({ id, initial, parents }: { id?: string; initial?: CategoryFormInput; parents: { id: string; name: string }[] }) {
   const router = useRouter();
@@ -62,6 +62,11 @@ export function CategoryDialog({ id, initial, parents }: { id?: string; initial?
               <Input {...register("slug")} />
               {errors.slug ? <p className="text-xs text-destructive">{errors.slug.message}</p> : null}
             </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Nom en arabe</Label>
+            <Input dir="rtl" lang="ar" placeholder="ثلاجات" {...register("nameAr")} />
+            <p className="text-xs text-muted-foreground">Affiché sur le site arabe (menus, page catégorie). Vide = nom français.</p>
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
             <Controller control={control} name="parentId" render={({ field }) => (

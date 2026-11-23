@@ -15,7 +15,7 @@ export default async function NewProductPage() {
         productId={null}
         categories={categories}
         brands={brands}
-        initial={{ name: "", slug: "", sku: "", shortDescription: "", description: "", price: 0, compareAtPrice: null, costPrice: null, stock: 0, lowStockThreshold: 3, status: "DRAFT", isFeatured: false, warrantyMonths: 24, categoryId: null, brandId: null, specs: [], images: [], metaTitle: "", metaDescription: "" }}
+        initial={{ name: "", nameAr: "", faq: [], slug: "", sku: "", shortDescription: "", description: "", price: 0, compareAtPrice: null, costPrice: null, stock: 0, lowStockThreshold: 3, status: "DRAFT", isFeatured: false, warrantyMonths: 24, categoryId: null, brandId: null, specs: [], images: [], metaTitle: "", metaDescription: "" }}
       />
     </>
   );

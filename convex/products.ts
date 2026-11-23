@@ -5,10 +5,12 @@ import { requireStaff, type AppUser } from "./lib/auth";
 import { fail } from "./lib/errors";
 import { buildSearchText, opt } from "./lib/products";
 import { recordSlugRedirect } from "./lib/seo";
-import { movementReason, productImage, productStatus } from "./schema";
+import { faqEntry, movementReason, productImage, productStatus } from "./schema";
 
 const productInput = v.object({
   name: v.string(),
+  nameAr: v.optional(v.union(v.string(), v.null())),
+  faq: v.optional(v.array(faqEntry)),
   slug: v.string(),
   sku: v.string(),
   shortDescription: v.optional(v.union(v.string(), v.null())),
@@ -57,6 +59,8 @@ export const save = mutation({
     const brandId = data.brandId ? ctx.db.normalizeId("brands", data.brandId) ?? undefined : undefined;
     const fields = {
       name: data.name,
+      nameAr: opt(data.nameAr?.trim()),
+      faq: data.faq?.length ? data.faq : undefined,
       slug: data.slug,
       sku: data.sku,
       shortDescription: opt(data.shortDescription),

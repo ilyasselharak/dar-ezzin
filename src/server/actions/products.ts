@@ -24,6 +24,8 @@ export async function saveProduct(id: string | null, input: ProductFormInput): P
       id,
       data: {
         name: data.name,
+        nameAr: data.nameAr ?? null,
+        faq: data.faq.map((f) => ({ question: f.question, answer: f.answer, questionAr: f.questionAr, answerAr: f.answerAr })),
         slug: data.slug,
         sku: data.sku,
         shortDescription: data.shortDescription ?? null,

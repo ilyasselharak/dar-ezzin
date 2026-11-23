@@ -229,6 +229,8 @@ export const getProduct = query({
     return {
       id: p._id as string,
       name: p.name,
+      nameAr: p.nameAr ?? null,
+      faq: p.faq ?? [],
       slug: p.slug,
       sku: p.sku,
       shortDescription: p.shortDescription ?? null,

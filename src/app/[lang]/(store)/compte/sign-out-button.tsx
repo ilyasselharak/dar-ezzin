@@ -1,6 +1,6 @@
 "use client";
 
-import { useLocalePath } from "@/i18n/client";
+import { useLocalePath, useI18n } from "@/i18n/client";
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { signOut } from "@/lib/auth-client";
 export function SignOutButton() {
   const router = useRouter();
   const lp = useLocalePath();
+  const { t } = useI18n();
   return (
     <Button
       variant="outline"
@@ -19,7 +20,7 @@ export function SignOutButton() {
         router.refresh();
       }}
     >
-      <LogOut /> Se déconnecter
+      <LogOut /> {t.header.signOut}
     </Button>
   );
 }

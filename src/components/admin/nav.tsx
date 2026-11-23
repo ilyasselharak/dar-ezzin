@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Boxes, LayoutDashboard, Package, Settings, ShoppingCart, Tags, Users, Warehouse, Award, ExternalLink, Link2, SearchCheck } from "lucide-react";
+import { Boxes, LayoutDashboard, Package, Settings, ShoppingCart, Tags, Users, Warehouse, Award, ExternalLink, Link2, SearchCheck, Truck, MessageCircleQuestion } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -12,6 +12,8 @@ const NAV = [
   { href: "/admin/categories", label: "Catégories", icon: Tags },
   { href: "/admin/brands", label: "Marques", icon: Award },
   { href: "/admin/inventory", label: "Stock", icon: Warehouse },
+  { href: "/admin/livraison", label: "Livraison & paiement", icon: Truck },
+  { href: "/admin/faq", label: "FAQ", icon: MessageCircleQuestion },
   { href: "/admin/seo", label: "SEO", icon: SearchCheck },
   { href: "/admin/electrodarna", label: "Electro Darna", icon: Link2 },
   { href: "/admin/customers", label: "Clients", icon: Users },

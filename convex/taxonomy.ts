@@ -15,6 +15,7 @@ export const saveCategory = mutation({
     id: v.union(v.string(), v.null()),
     data: v.object({
       name: v.string(),
+      nameAr: nullableString,
       slug: v.string(),
       description: nullableString,
       parentId: nullableString,
@@ -45,6 +46,7 @@ export const saveCategory = mutation({
 
     const fields = {
       name: data.name,
+      nameAr: opt(data.nameAr),
       slug: data.slug,
       description: opt(data.description),
       parentId,

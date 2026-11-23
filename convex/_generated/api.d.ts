@@ -13,6 +13,7 @@ import type * as catalog from "../catalog.js";
 import type * as crons from "../crons.js";
 import type * as delivery from "../delivery.js";
 import type * as electrodarna from "../electrodarna.js";
+import type * as faq from "../faq.js";
 import type * as http from "../http.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_cloudinary from "../lib/cloudinary.js";
@@ -43,6 +44,7 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   delivery: typeof delivery;
   electrodarna: typeof electrodarna;
+  faq: typeof faq;
   http: typeof http;
   "lib/auth": typeof lib_auth;
   "lib/cloudinary": typeof lib_cloudinary;

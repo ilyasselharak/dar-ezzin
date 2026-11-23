@@ -38,7 +38,7 @@ export default async function CategoriesPage() {
                 <TableCell>{c.isActive ? <Badge variant="secondary">Visible</Badge> : <Badge variant="outline">Masquée</Badge>}</TableCell>
                 <TableCell className="pe-5">
                   <div className="flex justify-end">
-                    <CategoryDialog id={c.id} parents={parents} initial={{ name: c.name, slug: c.slug, description: c.description ?? "", parentId: c.parentId, icon: c.icon ?? "", position: c.position, isActive: c.isActive, imageKey: c.imageKey, metaTitle: c.metaTitle ?? "", metaDescription: c.metaDescription ?? "" }} />
+                    <CategoryDialog id={c.id} parents={parents} initial={{ name: c.name, nameAr: c.nameAr ?? "", slug: c.slug, description: c.description ?? "", parentId: c.parentId, icon: c.icon ?? "", position: c.position, isActive: c.isActive, imageKey: c.imageKey, metaTitle: c.metaTitle ?? "", metaDescription: c.metaDescription ?? "" }} />
                     <Button asChild variant="ghost" size="icon-sm" aria-label="SEO avancé"><Link href={`/admin/seo/edit/category/${c.id}`}><SearchCheck /></Link></Button>
                     <DeleteTaxonomyButton id={c.id} kind="category" />
                   </div>

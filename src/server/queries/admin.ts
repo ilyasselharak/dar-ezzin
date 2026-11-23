@@ -36,3 +36,7 @@ export const getLinkedProducts = () => fetchAuthQuery(api.admin.linkedProducts, 
 export const getRemoteCatalog = () => fetchAuthAction(api.electrodarna.catalog, {});
 
 export const getMyOrders = () => fetchAuthQuery(api.orders.mine, {});
+
+export const listDeliveryZones = () => fetchAuthQuery(api.delivery.listZones, {});
+
+export const listFaqs = () => fetchAuthQuery(api.faq.list, {});

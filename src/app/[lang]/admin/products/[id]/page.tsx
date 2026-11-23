@@ -23,6 +23,8 @@ export default async function EditProductPage({ params }: PageProps<"/[lang]/adm
         brands={brands}
         initial={{
           name: product.name,
+          nameAr: product.nameAr ?? "",
+          faq: product.faq.map((f) => ({ question: f.question, answer: f.answer, questionAr: f.questionAr ?? "", answerAr: f.answerAr ?? "" })),
           slug: product.slug,
           sku: product.sku,
           shortDescription: product.shortDescription ?? "",
